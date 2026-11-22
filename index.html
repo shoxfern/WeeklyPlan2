@@ -1,0 +1,2348 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>高中生一週時間管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+    input { user-select: text; -webkit-user-select: text; }
+
+    /* 新海誠電影光影風格：白晝蔚藍晴空 vs 深邃星夜與琥珀微光 */
+    body {
+      background: linear-gradient(165deg, #bae6fd 0%, #e0f2fe 45%, #fef3c7 85%, #fde68a 100%);
+      background-attachment: fixed;
+    }
+    html.dark body {
+      background: linear-gradient(165deg, #060b19 0%, #0f172a 40%, #1e293b 75%, #334155 100%);
+      background-attachment: fixed;
+    }
+
+    @keyframes shootingStar {
+      0% { transform: translateX(0) translateY(0) rotate(-35deg); opacity: 0; }
+      10% { opacity: 0.9; }
+      30% { transform: translateX(-450px) translateY(315px) rotate(-35deg); opacity: 0; }
+      100% { transform: translateX(-450px) translateY(315px) rotate(-35deg); opacity: 0; }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.08); }
+    }
+    @keyframes flipReveal {
+      0% { transform: rotateY(90deg) scale(0.92); opacity: 0; }
+      100% { transform: rotateY(0deg) scale(1); opacity: 1; }
+    }
+    @keyframes dominoFall {
+      0% { transform: translateX(-8px) rotate(-2deg); opacity: 0.4; }
+      100% { transform: translateX(0) rotate(0deg); opacity: 1; }
+    }
+    .animate-flip-in { animation: flipReveal 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    .animate-domino { animation: dominoFall 0.35s ease-out forwards; }
+
+    .shinkai-star {
+      position: fixed;
+      width: 2px;
+      height: 2px;
+      background: white;
+      border-radius: 9999px;
+      pointer-events: none;
+      box-shadow: 0 0 6px 1px rgba(255, 255, 255, 0.8);
+      animation: pulseGlow ease-in-out infinite;
+    }
+    .shooting-star {
+      position: fixed;
+      width: 120px;
+      height: 1.5px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.95), rgba(56,189,248,0.5), transparent);
+      pointer-events: none;
+      animation: shootingStar 9s linear infinite;
+    }
+
+    .cinema-card {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.92);
+      box-shadow: 0 10px 30px -5px rgba(14, 116, 144, 0.12);
+      border-radius: 1.25rem;
+    }
+    html.dark .cinema-card {
+      background: rgba(15, 23, 42, 0.82);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      box-shadow: 0 12px 32px -5px rgba(0, 0, 0, 0.6);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 10px;
+      border-radius: 9999px;
+      background: rgba(148, 163, 184, 0.35);
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      border: 3px solid white;
+      box-shadow: 0 3px 10px rgba(2, 132, 199, 0.5);
+      cursor: pointer;
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.45); border-radius: 9999px; }
+  </style>
+</head>
+<body class="text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300 relative overflow-x-hidden pb-28">
+
+  <!-- 新海誠風格星空與光暈背景層 -->
+  <div id="skyAtmosphere" class="fixed inset-0 pointer-events-none overflow-hidden z-0"></div>
+
+  <!-- 頂部精簡導覽列 -->
+  <header class="sticky top-0 z-30 backdrop-blur-xl bg-white/85 dark:bg-slate-950/85 border-b border-sky-200/70 dark:border-slate-800 px-3 sm:px-4 py-2.5">
+    <div class="max-w-5xl mx-auto flex items-center justify-between gap-2 relative z-10">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 via-blue-600 to-amber-500 flex items-center justify-center text-lg text-white shadow-sm">
+          ⏳
+        </div>
+        <div>
+          <h1 class="font-black text-base sm:text-lg tracking-tight bg-gradient-to-r from-sky-700 via-blue-600 to-amber-600 dark:from-sky-300 dark:via-blue-200 dark:to-amber-200 bg-clip-text text-transparent">
+            高中生一週時間管理
+          </h1>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400">
+            單指卡片快排・體力骨牌連動・同步翻牌抉擇
+          </p>
+        </div>
+      </div>
+
+      <!-- 右側功能按鈕 -->
+      <div class="flex items-center gap-1.5">
+        <button onclick="openLobbyModal()" class="px-2.5 py-1.5 rounded-xl text-xs font-black bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+          <span>👥 進度</span>
+          <span id="headerReadyCount">0/0</span>
+        </button>
+
+        <button onclick="openJoinModal()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-500 text-white shadow-sm transition max-w-[110px] truncate">
+          👤 <span id="headerPlayerName">加入</span>
+        </button>
+
+        <button onclick="openVerseModal()" class="w-8 h-8 rounded-xl border border-sky-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 flex items-center justify-center text-xs shadow-sm" title="36則聖經經文庫">
+          📖
+        </button>
+
+        <button onclick="openConfigModal()" class="w-8 h-8 rounded-xl border border-sky-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 flex items-center justify-center text-xs shadow-sm" title="試算表設定">
+          ⚙️
+        </button>
+
+        <button onclick="toggleTheme()" class="w-8 h-8 rounded-xl border border-sky-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 flex items-center justify-center text-xs shadow-sm" title="切換日夜">
+          🌓
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 3 秒全場同步翻牌全螢幕倒數遮罩 -->
+  <div id="flipCountdownOverlay" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-lg p-6 text-center">
+    <div class="text-sky-300 font-black text-lg sm:text-xl mb-2 tracking-widest animate-pulse">
+      ⚡ 全員抉擇完畢・即將同步翻牌！
+    </div>
+    <div id="flipCountdownNumber" class="text-8xl sm:text-9xl font-black bg-gradient-to-b from-white via-sky-200 to-amber-300 bg-clip-text text-transparent drop-shadow-2xl my-4">
+      3
+    </div>
+    <p class="text-xs sm:text-sm text-slate-300 font-bold">
+      看看誰堅守了原定計畫，誰又被誘惑拉走！
+    </p>
+  </div>
+
+  <!-- 暱稱輸入彈窗 -->
+  <div id="joinModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-md p-4">
+    <div class="cinema-card max-w-md w-full p-6 space-y-4">
+      <div>
+        <h2 class="text-xl font-black text-sky-700 dark:text-sky-300 mb-1">輸入你的暱稱</h2>
+        <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+          週一至週五 <b class="text-sky-600 dark:text-sky-400">08:00 - 17:00</b> 固定為學校上課。用大卡片快速設定你的放學與週末行程，注意熬夜會引發體力骨牌透支！
+        </p>
+      </div>
+      
+      <input id="nicknameInput" type="text" maxlength="12" placeholder="輸入暱稱（例如：阿翰、小葵）..." 
+        class="w-full px-4 py-3 rounded-xl border border-sky-300 dark:border-slate-600 bg-white/90 dark:bg-slate-900/90 font-bold text-base text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+        onkeydown="if(event.key==='Enter') confirmJoin()" />
+
+      <div id="modalExistingPlayersBox" class="hidden space-y-1.5 pt-2 border-t border-slate-200 dark:border-slate-700">
+        <span class="text-[11px] font-bold text-slate-400">或點選已加入的暱稱直接切換：</span>
+        <div id="modalPlayerTabs" class="flex flex-wrap gap-1.5"></div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-1">
+        <button id="cancelModalBtn" onclick="closeJoinModal()" class="hidden px-4 py-2.5 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-800">
+          關閉
+        </button>
+        <button onclick="confirmJoin()" class="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-black bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white shadow-lg shadow-sky-600/25">
+          進入設定卡片
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 現場玩家狀態與開始模擬彈窗 -->
+  <div id="lobbyModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-md p-4">
+    <div class="cinema-card max-w-md w-full p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2.5">
+        <h3 class="font-black text-base text-sky-700 dark:text-sky-300">👥 現場玩家設定進度</h3>
+        <button onclick="closeLobbyModal()" class="text-slate-400 hover:text-slate-200 text-lg font-bold px-1">✕</button>
+      </div>
+
+      <div id="modalLobbyPlayerList" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+
+      <div class="flex flex-col gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+        <button onclick="closeLobbyModal(); startWeekSimulation();" class="w-full py-3 rounded-xl font-black text-sm bg-gradient-to-r from-sky-600 via-blue-600 to-teal-600 text-white shadow-lg">
+          ▶ 全員開跑這一週！
+        </button>
+        <div class="flex justify-between items-center pt-1">
+          <button onclick="syncAllToGoogleSheet(true)" class="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline">
+            ☁️ 立即匯出至試算表
+          </button>
+          <button onclick="resetAllData()" class="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline">
+            🗑️ 清空重置整局
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 36 則聖經經文庫瀏覽彈窗 -->
+  <div id="verseModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-md p-4">
+    <div class="cinema-card max-w-4xl w-full max-h-[85vh] flex flex-col p-5 sm:p-6">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-3 mb-4">
+        <div>
+          <h2 class="text-lg font-black text-sky-700 dark:text-sky-300">📖 時間管理與生命節奏・36 則聖經經文庫</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">週末結算時依據週計畫檢測結果自動配對最合適的經文與建議</p>
+        </div>
+        <button onclick="closeVerseModal()" class="text-slate-400 hover:text-slate-200 text-xl font-bold px-2">✕</button>
+      </div>
+      <div id="allVersesList" class="overflow-y-auto space-y-2.5 pr-1 flex-1"></div>
+    </div>
+  </div>
+
+  <!-- Google 試算表與 Firebase 設定彈窗 -->
+  <div id="configModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-md p-4">
+    <div class="cinema-card max-w-lg w-full p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-black text-sky-700 dark:text-sky-300">⚙️ 雲端資料庫與 Google 試算表串接</h2>
+        <button onclick="closeConfigModal()" class="text-slate-400 hover:text-slate-200 text-lg font-bold">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-600 dark:text-slate-300 block mb-1">Firebase Realtime Database 網址：</label>
+          <input id="firebaseUrlInput" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-900 font-mono text-xs" />
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-600 dark:text-slate-300 block mb-1">Google Apps Script (GAS) 試算表網址：</label>
+          <input id="gasUrlInput" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-900 font-mono text-xs" />
+          <p class="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1">✓ 已內建你的專屬 Firebase 與 GAS 試算表網址。</p>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-2">
+        <button onclick="syncAllToGoogleSheet(true)" class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow">
+          📤 立即匯出至試算表
+        </button>
+        <div class="flex gap-2">
+          <button onclick="closeConfigModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-800">關閉</button>
+          <button onclick="saveCloudConfig()" class="px-5 py-2 rounded-xl text-xs font-black bg-sky-600 hover:bg-sky-500 text-white shadow">儲存設定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 主內容區 -->
+  <main class="max-w-4xl mx-auto p-3 sm:p-5 relative z-10">
+
+    <!-- ================= 階段 1：單指點選大卡片 ＋ 手動填寫 ================= -->
+    <section id="planningView" class="space-y-4">
+      
+      <!-- 頂部即時時間分配與 7 天體力骨牌預警條 -->
+      <div class="cinema-card p-4 space-y-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-sky-600 dark:text-sky-400">正在設定：</span>
+            <span id="currentPlayerName" class="text-base sm:text-lg font-black">尚未加入</span>
+          </div>
+          <div id="staminaPreviewBadge" class="px-3 py-1 rounded-full text-xs font-black bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+            體力狀態：良好
+          </div>
+        </div>
+
+        <!-- 讀書 vs 自己的事 vs 睡眠 比例條 -->
+        <div class="flex justify-between text-xs font-bold">
+          <span class="text-sky-600 dark:text-sky-400">📘 自主讀書：<span id="statStudy">0</span>h</span>
+          <span class="text-amber-600 dark:text-amber-400">🎮 自己的事：<span id="statOwn">0</span>h</span>
+          <span class="text-teal-600 dark:text-teal-400">💤 睡眠：<span id="statSleep">0</span>h</span>
+        </div>
+        <div class="w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden flex">
+          <div id="barStudy" class="bg-sky-500 h-full transition-all duration-300" style="width: 0%"></div>
+          <div id="barOwn" class="bg-amber-500 h-full transition-all duration-300" style="width: 0%"></div>
+          <div id="barSleep" class="bg-teal-500 h-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+
+        <!-- 7 天體力預覽迷你列 -->
+        <div id="miniWeeklyStaminaBar" class="grid grid-cols-7 gap-1 pt-1"></div>
+      </div>
+
+      <!-- 分頁切換：【平日作息】、【週末兩天】、【一週總覽】 -->
+      <div class="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-white/65 dark:bg-slate-900/75 border border-sky-200/70 dark:border-slate-800">
+        <button id="tabWeekday" onclick="switchPlanTab('weekday')" class="py-2.5 rounded-xl font-black text-xs sm:text-sm bg-sky-600 text-white shadow transition">
+          🏫 平日 (一~五)
+        </button>
+        <button id="tabWeekend" onclick="switchPlanTab('weekend')" class="py-2.5 rounded-xl font-black text-xs sm:text-sm text-slate-600 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-800 transition">
+          🌟 週末 (六~日)
+        </button>
+        <button id="tabOverview" onclick="switchPlanTab('overview')" class="py-2.5 rounded-xl font-black text-xs sm:text-sm text-slate-600 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-800 transition">
+          📅 一週總覽
+        </button>
+      </div>
+
+      <!-- ===== 區塊 A：平日大卡片設定 ===== -->
+      <div id="weekdayCardsPanel" class="space-y-3.5">
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1">
+          <button onclick="selectWeekdayTarget('all')" id="wdBtn_all" class="px-3 py-1.5 rounded-xl text-xs font-black bg-sky-600 text-white shadow shrink-0">
+            ✨ 週一～五全部套用
+          </button>
+          <button onclick="selectWeekdayTarget(0)" id="wdBtn_0" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">週一</button>
+          <button onclick="selectWeekdayTarget(1)" id="wdBtn_1" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">週二</button>
+          <button onclick="selectWeekdayTarget(2)" id="wdBtn_2" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">週三</button>
+          <button onclick="selectWeekdayTarget(3)" id="wdBtn_3" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">週四</button>
+          <button onclick="selectWeekdayTarget(4)" id="wdBtn_4" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">週五</button>
+        </div>
+
+        <div id="weekdayDiffHint" class="hidden px-3.5 py-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-[11px] font-bold text-amber-700 dark:text-amber-300">
+          💡 提示：你曾個別微調過平日部分天數；在「全部套用」修改卡片會同步覆蓋週一至週五。
+        </div>
+
+        <div class="px-4 py-2.5 rounded-xl bg-slate-200/75 dark:bg-slate-800/80 border border-slate-300/60 dark:border-slate-700 flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+          <span>🏫 08:00 - 17:00 學校固定上課（9小時）</span>
+          <span>體力 -35</span>
+        </div>
+
+        <div id="weekdaySlotCards" class="space-y-3"></div>
+
+        <!-- 平日幾點睡覺滑桿卡片 -->
+        <div class="cinema-card p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="font-black text-sm text-teal-700 dark:text-teal-300">💤 平日幾點上床睡覺？（隔天 07:00 起床）</span>
+            <span id="wdBedtimeBadge" class="px-3 py-1 rounded-full text-xs font-black bg-teal-500/20 text-teal-700 dark:text-teal-200">
+              23:00 睡（睡 8 小時）
+            </span>
+          </div>
+          <input id="wdBedtimeSlider" type="range" min="22" max="27" step="1" value="23"
+            oninput="updateBedtimeSlider('weekday', this.value)"
+            class="w-full" />
+          <div class="flex justify-between text-[10px] font-bold text-slate-400 px-1">
+            <span>22:00</span>
+            <span>23:00</span>
+            <span>00:00</span>
+            <span>01:00</span>
+            <span>02:00</span>
+            <span>03:00 (爆肝)</span>
+          </div>
+          <p id="wdBedtimeHint" class="text-[11px] text-slate-500 dark:text-slate-400">
+            晚睡前的時間（22:00 到睡覺前）會自動計入「睡前自由時段」；睡不滿 6 小時將觸發隔天骨牌透支！
+          </p>
+        </div>
+      </div>
+
+      <!-- ===== 區塊 B：週末大卡片設定 ===== -->
+      <div id="weekendCardsPanel" class="hidden space-y-3.5">
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="selectWeekendDay(5)" id="weBtn_5" class="py-2 rounded-xl text-xs font-black bg-amber-600 text-white shadow">
+            ☀️ 週六行程設定
+          </button>
+          <button onclick="selectWeekendDay(6)" id="weBtn_6" class="py-2 rounded-xl text-xs font-bold bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+            🌤️ 週日行程設定
+          </button>
+        </div>
+
+        <div id="weekendSlotCards" class="space-y-3"></div>
+
+        <!-- 週末幾點睡覺滑桿卡片 -->
+        <div class="cinema-card p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="font-black text-sm text-teal-700 dark:text-teal-300">💤 週末幾點上床睡覺？（隔天 08:00 起床）</span>
+            <span id="weBedtimeBadge" class="px-3 py-1 rounded-full text-xs font-black bg-teal-500/20 text-teal-700 dark:text-teal-200">
+              00:00 睡（睡 8 小時）
+            </span>
+          </div>
+          <input id="weBedtimeSlider" type="range" min="22" max="27" step="1" value="24"
+            oninput="updateBedtimeSlider('weekend', this.value)"
+            class="w-full" />
+          <div class="flex justify-between text-[10px] font-bold text-slate-400 px-1">
+            <span>22:00</span>
+            <span>23:00</span>
+            <span>00:00</span>
+            <span>01:00</span>
+            <span>02:00</span>
+            <span>03:00 (爆肝)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 區塊 C：一週總覽分頁 ===== -->
+      <div id="overviewPanel" class="hidden space-y-3">
+        <div class="px-3.5 py-2.5 rounded-xl bg-sky-500/10 border border-sky-500/20 text-xs font-bold text-sky-700 dark:text-sky-300">
+          📅 這裡可以一眼檢視你週一到週日的完整安排與體力骨牌風險，點擊任一天可直接跳去修改。
+        </div>
+        <div id="weeklyOverviewGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+      </div>
+
+    </section>
+
+    <!-- ================= 階段 2：逐日開跑 ＋「全場同步翻牌」＋「體力骨牌效應」 ================= -->
+    <section id="simulationView" class="hidden space-y-4">
+      
+      <!-- 頂部天數進度與同步翻牌控制列 -->
+      <div class="cinema-card p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div id="simDayBadge" class="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 text-white font-black text-base sm:text-lg shadow">
+            週一
+          </div>
+          <div>
+            <h2 id="simStatusTitle" class="font-black text-base sm:text-lg text-sky-700 dark:text-sky-300">正在經歷這一天...</h2>
+            <p id="simStatusSub" class="text-xs text-slate-500 dark:text-slate-400">全員秘密選擇 A/B 後，將進行 3 秒倒數同步翻牌！</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <button onclick="backToPlanning()" class="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold hover:bg-slate-200/50 dark:hover:bg-slate-800 transition">
+            ← 返回修改
+          </button>
+          <button id="btnFlipOrNext" onclick="handleFlipOrNextClick()" class="flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-black text-sm bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white shadow-lg shadow-sky-600/25 transition">
+            等待大家選擇中...
+          </button>
+        </div>
+      </div>
+
+      <!-- 週一至週日進度條（鎖定未達到的未來天數，避免誤點跳過） -->
+      <div id="dayStepper" class="grid grid-cols-7 gap-1.5"></div>
+
+      <!-- 每個人的當日骨牌經歷與翻牌抉擇卡片 -->
+      <div id="simPlayerCards" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+      <!-- 週末總結算報告 -->
+      <div id="finalSummaryBox" class="hidden cinema-card p-5 sm:p-6 space-y-5 border-2 border-sky-500/50">
+        <div class="flex items-center justify-between flex-wrap gap-3 border-b border-slate-200/80 dark:border-slate-700/80 pb-4">
+          <div>
+            <h3 class="text-lg sm:text-xl font-black text-sky-700 dark:text-sky-300">
+              🏆 一週時間管理・週計畫深度檢測與經文勉勵報告
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              綜合檢測你的「原定計畫 vs 實際經歷」、「體力骨牌管理」與「抗誘惑定力」，給予專屬稱號、調整建議與聖經經文
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="openVerseModal()" class="px-3.5 py-2 rounded-xl font-bold text-xs bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30 hover:bg-sky-500/25 transition">
+              📖 瀏覽 36 則經文庫
+            </button>
+            <button onclick="syncAllToGoogleSheet(true)" class="px-4 py-2 rounded-xl font-black text-xs bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition">
+              📊 匯出完整檢測報告至試算表
+            </button>
+          </div>
+        </div>
+
+        <!-- 全場之最趣味頒獎條 -->
+        <div id="classAwardsStrip" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5"></div>
+
+        <div id="finalSummaryGrid" class="grid grid-cols-1 gap-5"></div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ================= 📱 底部固定送出列 ================= -->
+  <div id="stickyBottomBar" class="fixed bottom-0 inset-x-0 z-40 backdrop-blur-xl bg-white/95 dark:bg-slate-950/95 border-t border-sky-200/80 dark:border-slate-800 p-3 shadow-2xl">
+    <div class="max-w-4xl mx-auto flex items-center justify-between gap-2.5">
+      <button id="btnToggleReady" onclick="toggleReady()" class="flex-1 py-3 px-4 rounded-xl font-black text-sm bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/25 transition flex items-center justify-center gap-2">
+        <span>✓ 鎖定我的行程（我排好了）</span>
+      </button>
+      <button onclick="startWeekSimulation()" class="py-3 px-4 rounded-xl font-black text-sm bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white shadow-lg shadow-sky-600/25 transition shrink-0">
+        ▶ 全員開跑 (<span id="bottomReadyCount">0/0</span>)
+      </button>
+    </div>
+  </div>
+
+  <!-- 頂部通知 Toast -->
+  <div id="toastMsg" class="fixed bottom-20 right-4 z-50 hidden px-4 py-2.5 rounded-xl bg-slate-900/95 text-white text-xs font-bold shadow-xl border border-sky-500/40"></div>
+
+  <script>
+    /**************************************************************
+     * 0. 雲端連線設定與安全跳脫工具
+     **************************************************************/
+    const DEFAULT_FIREBASE_URL = 'https://weeklyplangame-default-rtdb.firebaseio.com/weekly_plan_game_v2';
+    const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycby62H3d1ZCqnOeGRVJkjFt6nNFWN3B_xvPGnFElDZHqMsnIFDCQKyiFbjdPiVrH8fIk/exec';
+
+    let savedFb = localStorage.getItem('tc_firebase_url_v2');
+    if (!savedFb) {
+      savedFb = DEFAULT_FIREBASE_URL;
+      localStorage.setItem('tc_firebase_url_v2', DEFAULT_FIREBASE_URL);
+    }
+    let FIREBASE_URL = savedFb;
+
+    let savedGas = localStorage.getItem('tc_gas_url');
+    if (!savedGas) {
+      savedGas = DEFAULT_GAS_URL;
+      localStorage.setItem('tc_gas_url', DEFAULT_GAS_URL);
+    }
+    let GAS_WEB_APP_URL = savedGas;
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    /**************************************************************
+     * 1. 聖經經文與具體建議資料庫（共 36 則，已修正所有錯字）
+     **************************************************************/
+    const BIBLE_VERSES = [
+      // 【類型 1：burnout 體力透支與過勞型（6 則）】
+      { id: 1, cat: 'burnout', catName: '安息與重新得力', ref: '詩篇 127:2', text: '你們清晨早起，夜晚安歇，吃勞碌得來的飯，本是枉然；惟有耶和華所親愛的，必叫他安然睡覺。', advice: '把時間塞滿不代表效率最高，放心給自己留出充足的睡眠，在安息中恢復體力吧！' },
+      { id: 2, cat: 'burnout', catName: '安息與重新得力', ref: '馬太福音 11:28', text: '凡勞苦擔重擔的人可以到我這裡來，我就使你們得安息。', advice: '當課業與生活壓得你喘不過氣時，別獨自硬撐，學會適時放下重擔、讓身心喘口氣。' },
+      { id: 3, cat: 'burnout', catName: '安息與重新得力', ref: '以賽亞書 30:15', text: '主耶和華以色列的聖者曾如此說：你們得救在乎歸回安息；你們得力在乎平靜安穩。', advice: '真正的力量來自平靜安穩的心，減少熬夜透支，明天才能走得更穩更遠。' },
+      { id: 4, cat: 'burnout', catName: '安息與重新得力', ref: '以賽亞書 40:31', text: '但那等候耶和華的必從新得力。他們必如鷹展翅上騰；他們奔跑卻不困倦，行走卻不疲乏。', advice: '懂得停下來充電的人，才能像老鷹一樣再次展翅高飛，別讓疲勞耗盡你的熱情。' },
+      { id: 5, cat: 'burnout', catName: '安息與重新得力', ref: '馬可福音 6:31', text: '耶穌說：「你們來，同我暗暗地到曠野地方去歇一歇。」這是因為來往的人多，他們連吃飯也沒有工夫。', advice: '連耶穌都會帶著門徒暫時離開忙碌的人群去歇一歇，記得在行程表裡為自己留白。' },
+      { id: 6, cat: 'burnout', catName: '安息與重新得力', ref: '詩篇 23:2-3', text: '他使我躺臥在青草地上，領我在可安歇的水邊。他使我的靈魂甦醒。', advice: '優質的睡眠與適度放鬆能使頭腦重新甦醒，今晚就提早放下書本與手機好好休息吧！' },
+
+      // 【類型 2：distracted 計畫趕不上變化／定力破功型（6 則）】
+      { id: 7, cat: 'distracted', catName: '節制與保守己心', ref: '箴言 25:28', text: '人不制伏自己的心，好像毀壞的城邑沒有牆垣。', advice: '面對手機與朋友臨時揪團時，試著先完成原本設定的 1 小時目標再去玩，為自己的時間建立界線。' },
+      { id: 8, cat: 'distracted', catName: '節制與保守己心', ref: '哥林多前書 6:12', text: '凡事我都可行，但不都有益處。凡事我都可行，但無論哪一件，我總不受它的轄制。', advice: '手遊與社群媒體是拿來放鬆的工具，別反過來被通知訊息綁架了你原本的計畫！' },
+      { id: 9, cat: 'distracted', catName: '節制與保守己心', ref: '提摩太後書 1:7', text: '因為神賜給我們，不是膽怯的心，乃是剛強、仁愛、謹守的心。', advice: '你裡面其實擁有「謹守（自律）」的力量！下次遇到誘惑二選一時，勇敢選擇對未來更有益的選項。' },
+      { id: 10, cat: 'distracted', catName: '節制與保守己心', ref: '箴言 4:23', text: '你要保守你心，勝過保守一切，因為一生的果效是由心發出。', advice: '讀書時把手機放進書包或開勿擾模式，先保守專注的心，讀完再盡情享受娛樂。' },
+      { id: 11, cat: 'distracted', catName: '節制與保守己心', ref: '加拉太書 5:22-23', text: '聖靈所結的果子，就是仁愛、喜樂、和平、忍耐、恩慈、良善、信實、溫柔、節制。', advice: '「節制」不是壓抑快樂，而是讓你在對的時間做對的事，享受真正沒有罪惡感的自由。' },
+      { id: 12, cat: 'distracted', catName: '節制與保守己心', ref: '希伯來書 12:1', text: '就當放下各樣的重擔，脫去容易纏累我們的罪，存心忍耐，奔那擺在我們前頭的路程。', advice: '找出這週最常打斷你計畫的「時間小偷」，下週試著減少它干擾你的機會。' },
+
+      // 【類型 3：diligent 堅定自律學霸型（6 則）】
+      { id: 13, cat: 'diligent', catName: '殷勤耕耘與忠心', ref: '箴言 21:5', text: '殷勤籌算的，足致豐裕；行事急躁的，都必缺乏。', advice: '你懂得提前規劃並踏實執行，這份殷勤與穩定將會為你累積出豐盛的成果！' },
+      { id: 14, cat: 'diligent', catName: '殷勤耕耘與忠心', ref: '歌羅西書 3:23', text: '無論做什麼，都要從心裡做，像是給主做的，不是給人做的。', advice: '你對自己的時間充滿責任感，保持這份全心投入的態度，同時也別忘了享受過程中的樂趣。' },
+      { id: 15, cat: 'diligent', catName: '殷勤耕耘與忠心', ref: '加拉太書 6:9', text: '我們行善，不可喪志；若不灰心，到了時候就要收成。', advice: '每一次耐住性子的複習與練習都不會白費，繼續堅持下去，到了時候必能歡呼收割！' },
+      { id: 16, cat: 'diligent', catName: '殷勤耕耘與忠心', ref: '箴言 13:4', text: '懶惰人羨慕，卻無所得；殷勤人必得豐裕。', advice: '你沒有停留在空想，而是用實際行動填滿每一天，你的自律正是你最棒的超能力。' },
+      { id: 17, cat: 'diligent', catName: '殷勤耕耘與忠心', ref: '路加福音 16:10', text: '人在最小的事上忠心，在大事上也忠心；在最小的事上不義，在大事上也不義。', advice: '能管好每天放學後短短幾個小時的人，未來也必能駕馭更大的人生舞台！' },
+      { id: 18, cat: 'diligent', catName: '殷勤耕耘與忠心', ref: '提摩太前書 4:12', text: '不可叫人小看你年輕，總要在言語、行為、愛心、信心、清潔上，都作信徒的榜樣。', advice: '雖然身為高中生，但你展現出的自律與時間規劃能力已經非常成熟，值得為自己喝采！' },
+
+      // 【類型 4：hedonist 娛樂至上／自由享樂型（6 則）】
+      { id: 19, cat: 'hedonist', catName: '愛惜光陰與智慧選擇', ref: '以弗所書 5:15-16', text: '你們要謹慎行事，不要像愚昧人，當像智慧人。要愛惜光陰，因為現今的世代邪惡。', advice: '青春的娛樂與社團很精彩，但記得每天為學習與未來預留固定時段，才不會在考前手忙腳亂。' },
+      { id: 20, cat: 'hedonist', catName: '愛惜光陰與智慧選擇', ref: '傳道書 11:9', text: '少年人哪，你在幼年時當快樂。在幼年的日子，使你的心歡暢...卻要知道，為這一切的事，神必審問你。', advice: '盡情享受打手遊、跳舞與朋友歡聚的同時，也別忘了對自己的學業與本分負責喔！' },
+      { id: 21, cat: 'hedonist', catName: '愛惜光陰與智慧選擇', ref: '傳道書 3:1', text: '凡事都有定期，天下萬務都有定時。', advice: '玩樂有定時、讀書也有定時。試著把一週的娛樂濃縮在最精華的時段，騰出空間給重要的成長目標。' },
+      { id: 22, cat: 'hedonist', catName: '愛惜光陰與智慧選擇', ref: '詩篇 90:12', text: '求你指教我們怎樣數算自己的日子，好叫我們得著智慧的心。', advice: '一週 168 小時轉眼就過，試著每天撥出 1~2 小時給需要靜下心累積的事，你會發現自己潛力無窮。' },
+      { id: 23, cat: 'hedonist', catName: '愛惜光陰與智慧選擇', ref: '箴言 12:11', text: '耕種自己田地的，必得飽食；追隨虛浮的，卻是無知。', advice: '放鬆完之後，記得回頭耕耘自己的課業與能力，紮實的收穫會帶給你更長久的成就感。' },
+      { id: 24, cat: 'hedonist', catName: '愛惜光陰與智慧選擇', ref: '哥林多前書 10:23', text: '凡事都可行，但不都有益處；凡事都可行，但不都造就人。', advice: '在排下週時間表時，問問自己：「這個活動能讓我充電，還是只是在消磨時間？」' },
+
+      // 【類型 5：sloth_rest 佛系補眠／空白漫遊型（6 則）】
+      { id: 25, cat: 'sloth_rest', catName: '甦醒起行與把握當下', ref: '箴言 6:9-10', text: '懶惰人哪，你要睡到幾時呢？你何時睡醒呢？再睡片時，打盹片時，抱著手躺臥片時。', advice: '這週你的睡眠非常飽足！既然體力已經充滿，下週不妨為自己設定一個熱血的小目標，動起來吧！' },
+      { id: 26, cat: 'sloth_rest', catName: '甦醒起行與把握當下', ref: '傳道書 11:4', text: '看風的，必不撒種；望雲的，必不收割。', advice: '別讓空檔時段在發呆與猶豫中溜走，現在就挑一件想做的事（讀書或培養興趣）勇敢跨出第一步！' },
+      { id: 27, cat: 'sloth_rest', catName: '甦醒起行與把握當下', ref: '羅馬書 13:11', text: '再者，你們曉得現今就是該趁早睡醒的時候；因為我們得救，現今比初信的時候更近了。', advice: '休息是為了走更長的路，當電力充飽達到 100% 時，就是你大展身手的時刻！' },
+      { id: 28, cat: 'sloth_rest', catName: '甦醒起行與把握當下', ref: '箴言 20:4', text: '懶惰人因冬寒不肯耕種，到收割的時候，他必討飯而無所得。', advice: '平常每天只要願意投入 1~2 小時耕耘，就能避免期末臨時抱佛腳的焦慮。' },
+      { id: 29, cat: 'sloth_rest', catName: '甦醒起行與把握當下', ref: '以弗所書 5:14', text: '所以主說：你這睡著的人當醒過來，從死裡復活！基督就要光照你了。', advice: '喚醒你裡面的熱情與好奇心，把悠閒的時段變成能讓你發光發熱的舞台！' },
+      { id: 30, cat: 'sloth_rest', catName: '甦醒起行與把握當下', ref: '箴言 19:15', text: '懶惰使人沉睡；懈怠的人必受飢餓。', advice: '有時睡太多反而會讓人更提不起勁，試著在放學後安排一點運動或跳舞，精神會更好喔！' },
+
+      // 【類型 6：balanced 智慧平衡管家型（6 則）】
+      { id: 31, cat: 'balanced', catName: '智慧平衡與全人成長', ref: '路加福音 2:52', text: '耶穌的智慧和身量，並神和人喜愛他的心，都一齊增長。', advice: '你的時間分配非常均衡！同時兼顧了知識學習、身心健康與人際互動，是最理想的生活節奏。' },
+      { id: 32, cat: 'balanced', catName: '智慧平衡與全人成長', ref: '箴言 16:9', text: '人心籌算自己的道路；惟耶和華指引他的腳步。', advice: '你既能認真規劃生活，又能從容面對突發變化，帶著這份彈性與智慧繼續前行吧！' },
+      { id: 33, cat: 'balanced', catName: '智慧平衡與全人成長', ref: '詩篇 37:5', text: '當將你的事交託耶和華，並倚靠他，他就必成全。', advice: '在規律的讀書與放鬆節奏中，保持平穩與信靠的心，你所付出的努力必會結出美好的果實。' },
+      { id: 34, cat: 'balanced', catName: '智慧平衡與全人成長', ref: '箴言 3:5-6', text: '你要專心仰賴耶和華，不可倚靠自己的聰明，在你一切所行的事上都要認定他，他必指引你的路。', advice: '懂得管理時間與體力是極大的智慧，願你在每一天的日常中都充滿方向感與平安。' },
+      { id: 35, cat: 'balanced', catName: '智慧平衡與全人成長', ref: '腓立比書 4:13', text: '我靠著那加給我力量的，凡事都能做。', advice: '良好的作息與時間分配成為你穩固的後盾，面對接下來的挑戰，你絕對有能力從容應對！' },
+      { id: 36, cat: 'balanced', catName: '智慧平衡與全人成長', ref: '傳道書 3:11', text: '神造萬物，各按其時成為美好，又將永恆安置在世人心裡。', advice: '你在讀書、興趣與休息之間找到了美好的平衡點，讓每一段時光都發揮了它的價值！' }
+    ];
+
+    /**************************************************************
+     * 2. 常數與大卡片類別設定
+     **************************************************************/
+    const DAYS = ['週一', '週二', '週三', '週四', '週五', '週六', '週日'];
+    
+    const STAMINA_COST = {
+      school: -35,
+      study: -8,
+      own_hobby: -6,
+      own_fun: -4,
+      own_social: -4,
+      sleep: +10
+    };
+
+    const CARD_TYPES = [
+      { id: 'study', label: '📘 自主讀書', defaultText: '複習功課', cost: -8, activeClass: 'bg-sky-600 text-white border-sky-400 shadow-sm' },
+      { id: 'own_fun', label: '🎮 娛樂放鬆', defaultText: '打手遊', cost: -4, activeClass: 'bg-amber-600 text-white border-amber-400 shadow-sm' },
+      { id: 'own_hobby', label: '🏐 運動興趣', defaultText: '跳舞', cost: -6, activeClass: 'bg-emerald-600 text-white border-emerald-400 shadow-sm' },
+      { id: 'own_social', label: '🧋 聚餐日常', defaultText: '吃飯放空', cost: -4, activeClass: 'bg-orange-600 text-white border-orange-400 shadow-sm' },
+      { id: 'sleep', label: '💤 補眠休息', defaultText: '睡覺', cost: +10, activeClass: 'bg-teal-600 text-white border-teal-400 shadow-sm' }
+    ];
+
+    const WEEKDAY_SLOTS = [
+      { id: 's1', title: '🌇 放學傍晚', timeRange: '17:00 - 19:00', hours: 2 },
+      { id: 's2', title: '🌃 晚上黃金時段', timeRange: '19:00 - 22:00', hours: 3 },
+      { id: 's3', title: '🌌 睡前自由時段', timeRange: '22:00 - 睡覺前', hours: 1 }
+    ];
+
+    const WEEKEND_SLOTS = [
+      { id: 'w1', title: '☀️ 週末上午', timeRange: '08:00 - 12:00', hours: 4 },
+      { id: 'w2', title: '🌤️ 週末下午', timeRange: '13:00 - 18:00', hours: 5 },
+      { id: 'w3', title: '🌃 週末晚上', timeRange: '18:00 - 睡覺前', hours: 6 }
+    ];
+
+    /**************************************************************
+     * 3. 狀態管理與輸入保護旗標
+     **************************************************************/
+    let state = {
+      players: {},
+      simState: {
+        active: false,
+        dayIndex: 0,
+        maxDayReached: 0,
+        seed: 12345,
+        choices: {},
+        revealed: {},
+        verseOffsets: {},
+        sheetSynced: false
+      },
+      config: {
+        gasUrl: DEFAULT_GAS_URL
+      }
+    };
+
+    let currentPlayerId = localStorage.getItem('tc_player_id') || null;
+    let activePlanTab = 'weekday';      // 'weekday' | 'weekend' | 'overview'
+    let weekdayTarget = 'all';          // 'all' | 0 | 1 | 2 | 3 | 4
+    let weekendTargetDay = 5;           // 5 | 6
+    let lastRemoteHash = '';
+    let isCountingDownFlip = false;
+    let isInitialLoad = true;
+    let localEditLockUntil = 0;         // 保護本地編輯不被背景拉取覆寫
+
+    /**************************************************************
+     * 4. 初始化與雲端同步（含防衝突合併邏輯）
+     **************************************************************/
+    function initSkyAtmosphere() {
+      const container = document.getElementById('skyAtmosphere');
+      let html = '';
+      for (let i = 0; i < 28; i++) {
+        const left = (Math.random() * 98).toFixed(1);
+        const top = (Math.random() * 65).toFixed(1);
+        const dur = (Math.random() * 3 + 2).toFixed(1);
+        const delay = (Math.random() * 5).toFixed(1);
+        html += `<div class="shinkai-star" style="left:${left}%; top:${top}%; animation-duration:${dur}s; animation-delay:${delay}s;"></div>`;
+      }
+      html += `<div class="shooting-star" style="top: 12%; left: 78%; animation-delay: 1s;"></div>`;
+      html += `<div class="shooting-star" style="top: 28%; left: 92%; animation-delay: 5.5s;"></div>`;
+      container.innerHTML = html;
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      initSkyAtmosphere();
+      renderAllVersesModalList();
+
+      await pullFromCloud();
+      isInitialLoad = false;
+      setInterval(pullFromCloud, 2000);
+
+      if (currentPlayerId && state.players[currentPlayerId]) {
+        closeJoinModal();
+        refreshUI();
+      } else {
+        openJoinModal();
+      }
+    });
+
+    function showToast(msg) {
+      const el = document.getElementById('toastMsg');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 2400);
+    }
+
+    function isUserTypingInCard() {
+      const el = document.activeElement;
+      return el && el.tagName === 'INPUT' && el.hasAttribute('data-card-input');
+    }
+
+    async function pullFromCloud() {
+      try {
+        const res = await fetch(`${FIREBASE_URL}.json`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data) {
+          if (Date.now() > localEditLockUntil) {
+            state.players = {};
+            state.simState = { active: false, dayIndex: 0, maxDayReached: 0, seed: Date.now(), choices: {}, revealed: {}, verseOffsets: {}, sheetSynced: false };
+            refreshUI();
+          }
+          return;
+        }
+        const hash = JSON.stringify(data);
+        if (hash === lastRemoteHash) return;
+
+        const prevRevealed = state.simState && state.simState.revealed ? { ...state.simState.revealed } : {};
+        lastRemoteHash = hash;
+
+        // 保護本地玩家正在打字或剛儲存完 2 秒內的資料，避免被舊快照覆蓋
+        const localSelfBackup = (currentPlayerId && state.players[currentPlayerId] && (Date.now() < localEditLockUntil || isUserTypingInCard()))
+          ? state.players[currentPlayerId]
+          : null;
+
+        state.players = data.players || {};
+        if (localSelfBackup) {
+          state.players[currentPlayerId] = localSelfBackup;
+        }
+
+        // 若目前玩家在雲端被刪除，重設身分
+        if (currentPlayerId && !state.players[currentPlayerId] && !localSelfBackup) {
+          currentPlayerId = null;
+          localStorage.removeItem('tc_player_id');
+        }
+
+        state.simState = data.simState || { active: false, dayIndex: 0, maxDayReached: 0, seed: 12345, choices: {}, revealed: {}, verseOffsets: {}, sheetSynced: false };
+        if (!state.simState.choices) state.simState.choices = {};
+        if (!state.simState.revealed) state.simState.revealed = {};
+        if (!state.simState.verseOffsets) state.simState.verseOffsets = {};
+        if (typeof state.simState.maxDayReached !== 'number') {
+          state.simState.maxDayReached = state.simState.dayIndex || 0;
+        }
+        if (data.config && data.config.gasUrl) {
+          GAS_WEB_APP_URL = data.config.gasUrl;
+          localStorage.setItem('tc_gas_url', GAS_WEB_APP_URL);
+        }
+
+        const dIdx = state.simState.dayIndex || 0;
+        // 僅在非初次載入且該日剛從未翻牌變成已翻牌時，播放 3 秒全場倒數特效
+        if (!isInitialLoad && state.simState.active && state.simState.revealed[dIdx] && !prevRevealed[dIdx] && !isCountingDownFlip) {
+          triggerThreeSecondFlipAnimation();
+        } else {
+          refreshUI(isUserTypingInCard());
+        }
+      } catch (e) {
+        console.warn('連線異常', e);
+      }
+    }
+
+    async function pushPlayerToCloud() {
+      if (!currentPlayerId || !state.players[currentPlayerId]) return;
+      localEditLockUntil = Date.now() + 2500;
+      try {
+        await fetch(`${FIREBASE_URL}/players/${currentPlayerId}.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(state.players[currentPlayerId])
+        });
+      } catch (e) {}
+    }
+
+    async function patchSimStateToCloud(partialObj) {
+      try {
+        await fetch(`${FIREBASE_URL}/simState.json`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(partialObj)
+        });
+      } catch (e) {}
+    }
+
+    async function pushFullSimStateToCloud() {
+      try {
+        await fetch(`${FIREBASE_URL}/simState.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(state.simState)
+        });
+      } catch (e) {}
+    }
+
+    /**************************************************************
+     * 5. 大卡片資料結構與體力計算核心
+     **************************************************************/
+    function createDefaultPlayerPlan() {
+      const daysPlan = {};
+      for (let d = 0; d < 7; d++) {
+        if (d < 5) {
+          daysPlan[d] = {
+            bedtime: 23,
+            slots: {
+              s1: { cat: 'own_social', text: '吃飯通勤' },
+              s2: { cat: 'study', text: '複習功課' },
+              s3: { cat: 'own_fun', text: '打手遊' }
+            }
+          };
+        } else {
+          daysPlan[d] = {
+            bedtime: 24,
+            slots: {
+              w1: { cat: 'study', text: '寫作業' },
+              w2: { cat: 'own_hobby', text: '跳舞' },
+              w3: { cat: 'own_fun', text: '打手遊' }
+            }
+          };
+        }
+      }
+      return daysPlan;
+    }
+
+    function ensurePlayerPlan(player) {
+      if (!player.daysPlan) {
+        player.daysPlan = createDefaultPlayerPlan();
+      }
+      // 補齊可能缺漏的天數節點
+      for (let d = 0; d < 7; d++) {
+        if (!player.daysPlan[d] || !player.daysPlan[d].slots) {
+          player.daysPlan[d] = createDefaultPlayerPlan()[d];
+        }
+      }
+      return player.daysPlan;
+    }
+
+    function computeDayMetrics(dayPlan, dIdx) {
+      const bedtime = dayPlan.bedtime || (dIdx < 5 ? 23 : 24);
+      const wakeTime = dIdx < 5 ? 7 : 8;
+      let sleepHours = Math.max(3, (24 - bedtime) + wakeTime);
+
+      let studyHours = 0;
+      let ownHours = 0;
+      let hobbyHours = 0;
+      let funHours = 0;
+      let studyTasks = [];
+      let ownTasks = [];
+      let deltaStamina = dIdx < 5 ? STAMINA_COST.school : 0;
+
+      // 基礎睡眠恢復體力
+      deltaStamina += sleepHours * STAMINA_COST.sleep;
+
+      const slotDefs = dIdx < 5
+        ? [
+            { key: 's1', hrs: 2 },
+            { key: 's2', hrs: 3 },
+            { key: 's3', hrs: Math.max(0, bedtime - 22) }
+          ]
+        : [
+            { key: 'w1', hrs: 4 },
+            { key: 'w2', hrs: 5 },
+            { key: 'w3', hrs: Math.max(2, bedtime - 18) }
+          ];
+
+      slotDefs.forEach(sd => {
+        if (sd.hrs <= 0) return;
+        const item = (dayPlan.slots && dayPlan.slots[sd.key]) ? dayPlan.slots[sd.key] : { cat: 'own_fun', text: '自由時間' };
+        if (item.cat === 'study') {
+          studyHours += sd.hrs;
+          if (item.text && !studyTasks.includes(item.text)) studyTasks.push(item.text);
+          deltaStamina += sd.hrs * STAMINA_COST.study;
+        } else if (item.cat === 'sleep') {
+          // 修正 BUG：白天或晚間選補眠休息時，正確累加至 sleepHours 與體力恢復
+          sleepHours += sd.hrs;
+          deltaStamina += sd.hrs * STAMINA_COST.sleep;
+        } else {
+          ownHours += sd.hrs;
+          if (item.cat === 'own_hobby') hobbyHours += sd.hrs;
+          else funHours += sd.hrs;
+          if (item.text && !ownTasks.includes(item.text)) ownTasks.push(item.text);
+          deltaStamina += sd.hrs * (STAMINA_COST[item.cat] || -4);
+        }
+      });
+
+      return {
+        bedtime,
+        sleepHours,
+        studyHours,
+        ownHours,
+        hobbyHours,
+        funHours,
+        studyTasks,
+        ownTasks,
+        deltaStamina
+      };
+    }
+
+    // 規劃階段預覽：計算整週 7 天靜態體力與骨牌預警
+    function previewWeeklyStamina(player) {
+      const daysPlan = ensurePlayerPlan(player);
+      const weekly = [];
+      let dominoDebt = 0;
+
+      for (let d = 0; d < 7; d++) {
+        const m = computeDayMetrics(daysPlan[d], d);
+        const startStamina = Math.max(15, Math.min(100, 100 - dominoDebt));
+        const endStamina = Math.min(100, startStamina + m.deltaStamina);
+        const overdrawn = endStamina < 0;
+        const triggeredDomino = dominoDebt >= 20;
+
+        dominoDebt = 0;
+        if (endStamina < 0) dominoDebt += Math.abs(endStamina) + 15;
+        if (m.sleepHours < 6) dominoDebt += (6 - m.sleepHours) * 12;
+
+        weekly.push({ day: d, ...m, startStamina, endStamina, overdrawn, triggeredDomino });
+      }
+      return weekly;
+    }
+
+    /**************************************************************
+     * 6. 卡片設定、一週總覽與手動填寫互動
+     **************************************************************/
+    function switchPlanTab(tab) {
+      activePlanTab = tab;
+      const tabs = {
+        weekday: { btn: document.getElementById('tabWeekday'), panel: document.getElementById('weekdayCardsPanel'), activeCls: 'py-2.5 rounded-xl font-black text-xs sm:text-sm bg-sky-600 text-white shadow transition' },
+        weekend: { btn: document.getElementById('tabWeekend'), panel: document.getElementById('weekendCardsPanel'), activeCls: 'py-2.5 rounded-xl font-black text-xs sm:text-sm bg-amber-600 text-white shadow transition' },
+        overview: { btn: document.getElementById('tabOverview'), panel: document.getElementById('overviewPanel'), activeCls: 'py-2.5 rounded-xl font-black text-xs sm:text-sm bg-teal-600 text-white shadow transition' }
+      };
+      const inactiveCls = 'py-2.5 rounded-xl font-black text-xs sm:text-sm text-slate-600 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-800 transition';
+
+      Object.entries(tabs).forEach(([key, obj]) => {
+        if (key === tab) {
+          obj.btn.className = obj.activeCls;
+          obj.panel.classList.remove('hidden');
+        } else {
+          obj.btn.className = inactiveCls;
+          obj.panel.classList.add('hidden');
+        }
+      });
+
+      renderPlanCards();
+    }
+
+    function jumpToEditDayFromOverview(dIdx) {
+      if (dIdx < 5) {
+        selectWeekdayTarget(dIdx);
+        switchPlanTab('weekday');
+      } else {
+        selectWeekendDay(dIdx);
+        switchPlanTab('weekend');
+      }
+    }
+
+    function selectWeekdayTarget(target) {
+      weekdayTarget = target;
+      ['all', 0, 1, 2, 3, 4].forEach(t => {
+        const btn = document.getElementById(`wdBtn_${t}`);
+        if (!btn) return;
+        btn.className = (t === target)
+          ? 'px-3 py-1.5 rounded-xl text-xs font-black bg-sky-600 text-white shadow shrink-0'
+          : 'px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0';
+      });
+      renderPlanCards();
+    }
+
+    function selectWeekendDay(dIdx) {
+      weekendTargetDay = dIdx;
+      [5, 6].forEach(d => {
+        const btn = document.getElementById(`weBtn_${d}`);
+        if (!btn) return;
+        btn.className = (d === dIdx)
+          ? 'py-2 rounded-xl text-xs font-black bg-amber-600 text-white shadow'
+          : 'py-2 rounded-xl text-xs font-bold bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
+      });
+      renderPlanCards();
+    }
+
+    async function selectCardCategory(mode, slotKey, catId) {
+      if (!currentPlayerId || !state.players[currentPlayerId]) return openJoinModal();
+      const player = state.players[currentPlayerId];
+      const daysPlan = ensurePlayerPlan(player);
+      const cardMeta = CARD_TYPES.find(c => c.id === catId) || CARD_TYPES[0];
+
+      const targetDays = mode === 'weekday'
+        ? (weekdayTarget === 'all' ? [0, 1, 2, 3, 4] : [weekdayTarget])
+        : [weekendTargetDay];
+
+      targetDays.forEach(d => {
+        daysPlan[d].slots[slotKey] = {
+          cat: catId,
+          text: cardMeta.defaultText
+        };
+      });
+
+      refreshUI();
+      await pushPlayerToCloud();
+    }
+
+    let textSyncTimeout = null;
+    function updateCardManualText(mode, slotKey, newText) {
+      if (!currentPlayerId || !state.players[currentPlayerId]) return;
+      localEditLockUntil = Date.now() + 2500;
+      const player = state.players[currentPlayerId];
+      const daysPlan = ensurePlayerPlan(player);
+
+      const targetDays = mode === 'weekday'
+        ? (weekdayTarget === 'all' ? [0, 1, 2, 3, 4] : [weekdayTarget])
+        : [weekendTargetDay];
+
+      targetDays.forEach(d => {
+        if (!daysPlan[d].slots[slotKey]) {
+          daysPlan[d].slots[slotKey] = { cat: 'own_fun', text: newText };
+        } else {
+          daysPlan[d].slots[slotKey].text = newText;
+        }
+      });
+
+      clearTimeout(textSyncTimeout);
+      textSyncTimeout = setTimeout(() => {
+        pushPlayerToCloud();
+      }, 450);
+    }
+
+    let sliderSyncTimeout = null;
+    function updateBedtimeSlider(mode, valStr) {
+      if (!currentPlayerId || !state.players[currentPlayerId]) return openJoinModal();
+      localEditLockUntil = Date.now() + 2500;
+      const val = parseInt(valStr, 10);
+      const player = state.players[currentPlayerId];
+      const daysPlan = ensurePlayerPlan(player);
+
+      const targetDays = mode === 'weekday'
+        ? (weekdayTarget === 'all' ? [0, 1, 2, 3, 4] : [weekdayTarget])
+        : [weekendTargetDay];
+
+      targetDays.forEach(d => {
+        daysPlan[d].bedtime = val;
+      });
+
+      refreshUI();
+      clearTimeout(sliderSyncTimeout);
+      sliderSyncTimeout = setTimeout(() => {
+        pushPlayerToCloud();
+      }, 300);
+    }
+
+    function formatBedtimeText(val) {
+      if (val === 22) return '22:00 睡';
+      if (val === 23) return '23:00 睡';
+      if (val === 24) return '00:00 睡';
+      return `凌晨 0${val - 24}:00 睡`;
+    }
+
+    function checkWeekdaysDiffer(daysPlan) {
+      const base = JSON.stringify(daysPlan[0]);
+      for (let d = 1; d < 5; d++) {
+        if (JSON.stringify(daysPlan[d]) !== base) return true;
+      }
+      return false;
+    }
+
+    function renderPlanCards() {
+      const player = currentPlayerId ? state.players[currentPlayerId] : null;
+      const daysPlan = player ? ensurePlayerPlan(player) : createDefaultPlayerPlan();
+
+      // 顯示是否已有個別微調提示
+      const diffHint = document.getElementById('weekdayDiffHint');
+      if (diffHint) {
+        diffHint.classList.toggle('hidden', !(weekdayTarget === 'all' && checkWeekdaysDiffer(daysPlan)));
+      }
+
+      // 1. 平日大卡片
+      const refWd = weekdayTarget === 'all' ? 0 : weekdayTarget;
+      const wdData = daysPlan[refWd];
+      const s3ExtraHours = Math.max(0, (wdData.bedtime || 23) - 22);
+
+      document.getElementById('weekdaySlotCards').innerHTML = WEEKDAY_SLOTS.map(slot => {
+        const cur = wdData.slots[slot.id] || { cat: 'study', text: '' };
+        const actualHrs = slot.id === 's3' ? s3ExtraHours : slot.hours;
+        const isZeroHour = (slot.id === 's3' && actualHrs === 0);
+        const timeDesc = slot.id === 's3'
+          ? (isZeroHour ? '22:00 準時上床（無熬夜時段）' : `22:00 - ${formatBedtimeText(wdData.bedtime)}（共 ${actualHrs} 小時）`)
+          : `${slot.timeRange}（${slot.hours} 小時）`;
+
+        return `
+          <div class="cinema-card p-4 space-y-3 ${isZeroHour ? 'opacity-60' : ''}">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-black text-sm sm:text-base text-sky-700 dark:text-sky-300">${slot.title}</span>
+              <span class="text-xs font-bold text-slate-500 dark:text-slate-400">${timeDesc}</span>
+            </div>
+
+            ${isZeroHour ? `
+              <div class="text-xs font-bold text-teal-600 dark:text-teal-300 bg-teal-500/10 rounded-xl p-2.5">
+                💤 你設定 22:00 就上床睡覺，往右拖曳下方睡覺滑桿即可開啟此晚間時段。
+              </div>
+            ` : `
+              <div class="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                ${CARD_TYPES.map(ct => {
+                  const isSelected = cur.cat === ct.id;
+                  return `
+                    <button onclick="selectCardCategory('weekday', '${slot.id}', '${ct.id}')"
+                      class="py-2 px-2 rounded-xl text-xs font-black border transition ${
+                        isSelected
+                          ? ct.activeClass
+                          : 'bg-white/70 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-sky-500/10'
+                      }">
+                      ${ct.label}
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0">✏️ 手動填寫：</span>
+                <input type="text" data-card-input="true" maxlength="14" value="${escapeHtml(cur.text || '')}"
+                  oninput="updateCardManualText('weekday', '${slot.id}', this.value)"
+                  placeholder="輸入具體做的事（例如：跳舞、算數學、打手遊）..."
+                  class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white/95 dark:bg-slate-900 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500" />
+              </div>
+            `}
+          </div>
+        `;
+      }).join('');
+
+      const wdBed = wdData.bedtime || 23;
+      const wdSleepHrs = (24 - wdBed) + 7;
+      document.getElementById('wdBedtimeSlider').value = wdBed;
+      document.getElementById('wdBedtimeBadge').textContent = `${formatBedtimeText(wdBed)}（基礎睡 ${wdSleepHrs} 小時）`;
+      document.getElementById('wdBedtimeBadge').className = wdSleepHrs < 6
+        ? 'px-3 py-1 rounded-full text-xs font-black bg-red-500/20 text-red-600 dark:text-red-300 animate-pulse'
+        : 'px-3 py-1 rounded-full text-xs font-black bg-teal-500/20 text-teal-700 dark:text-teal-200';
+
+      // 2. 週末大卡片
+      const weData = daysPlan[weekendTargetDay];
+      const w3Hours = Math.max(2, (weData.bedtime || 24) - 18);
+
+      document.getElementById('weekendSlotCards').innerHTML = WEEKEND_SLOTS.map(slot => {
+        const cur = weData.slots[slot.id] || { cat: 'own_fun', text: '' };
+        const actualHrs = slot.id === 'w3' ? w3Hours : slot.hours;
+        const timeDesc = slot.id === 'w3'
+          ? `18:00 - ${formatBedtimeText(weData.bedtime)}（共 ${actualHrs} 小時）`
+          : `${slot.timeRange}（${slot.hours} 小時）`;
+
+        return `
+          <div class="cinema-card p-4 space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-black text-sm sm:text-base text-amber-600 dark:text-amber-300">${slot.title}</span>
+              <span class="text-xs font-bold text-slate-500 dark:text-slate-400">${timeDesc}</span>
+            </div>
+
+            <div class="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+              ${CARD_TYPES.map(ct => {
+                const isSelected = cur.cat === ct.id;
+                return `
+                  <button onclick="selectCardCategory('weekend', '${slot.id}', '${ct.id}')"
+                    class="py-2 px-2 rounded-xl text-xs font-black border transition ${
+                      isSelected
+                        ? ct.activeClass
+                        : 'bg-white/70 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-amber-500/10'
+                    }">
+                    ${ct.label}
+                  </button>
+                `;
+              }).join('')}
+            </div>
+
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0">✏️ 手動填寫：</span>
+              <input type="text" data-card-input="true" maxlength="14" value="${escapeHtml(cur.text || '')}"
+                oninput="updateCardManualText('weekend', '${slot.id}', this.value)"
+                placeholder="輸入具體做的事（例如：跳舞、練球、追劇）..."
+                class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white/95 dark:bg-slate-900 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const weBed = weData.bedtime || 24;
+      const weSleepHrs = (24 - weBed) + 8;
+      document.getElementById('weBedtimeSlider').value = weBed;
+      document.getElementById('weBedtimeBadge').textContent = `${formatBedtimeText(weBed)}（基礎睡 ${weSleepHrs} 小時）`;
+      document.getElementById('weBedtimeBadge').className = weSleepHrs < 6
+        ? 'px-3 py-1 rounded-full text-xs font-black bg-red-500/20 text-red-600 dark:text-red-300 animate-pulse'
+        : 'px-3 py-1 rounded-full text-xs font-black bg-teal-500/20 text-teal-700 dark:text-teal-200';
+
+      // 3. 一週總覽分頁
+      if (player) {
+        const weekly = previewWeeklyStamina(player);
+        document.getElementById('weeklyOverviewGrid').innerHTML = weekly.map((w, dIdx) => {
+          const dp = daysPlan[dIdx];
+          const slotsList = dIdx < 5 ? WEEKDAY_SLOTS : WEEKEND_SLOTS;
+          return `
+            <div onclick="jumpToEditDayFromOverview(${dIdx})" class="cinema-card p-3.5 cursor-pointer hover:ring-2 hover:ring-sky-500 transition space-y-2">
+              <div class="flex items-center justify-between border-b border-slate-200/70 dark:border-slate-700/70 pb-1.5">
+                <span class="font-black text-sm ${dIdx >= 5 ? 'text-amber-600 dark:text-amber-300' : 'text-sky-700 dark:text-sky-300'}">${DAYS[dIdx]}</span>
+                <span class="text-[11px] font-black px-2 py-0.5 rounded-full ${w.overdrawn ? 'bg-red-500/20 text-red-500' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300'}">
+                  起 ${w.startStamina} → 餘 ${w.endStamina} ${w.overdrawn ? '⚠️透支' : ''}
+                </span>
+              </div>
+              <div class="space-y-1 text-xs">
+                ${slotsList.map(sl => {
+                  const val = dp.slots[sl.id] || { cat: 'own_fun', text: '-' };
+                  const ct = CARD_TYPES.find(c => c.id === val.cat);
+                  return `<div class="flex justify-between"><span class="text-slate-400">${sl.title}</span><span class="font-bold truncate max-w-[160px]">${ct ? ct.label.slice(0,2) : ''} ${escapeHtml(val.text || '')}</span></div>`;
+                }).join('')}
+                <div class="flex justify-between pt-1 border-t border-dashed border-slate-200 dark:border-slate-800 text-[11px] text-teal-600 dark:text-teal-300 font-bold">
+                  <span>💤 睡覺時間</span>
+                  <span>${formatBedtimeText(dp.bedtime)}（共睡 ${w.sleepHours}h）</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    function updateStatsAndStaminaPreview() {
+      const player = currentPlayerId ? state.players[currentPlayerId] : null;
+      if (!player) return;
+
+      const weekly = previewWeeklyStamina(player);
+      let totalS = 0, totalO = 0, totalSlp = 0, overDays = 0;
+
+      weekly.forEach(w => {
+        totalS += w.studyHours;
+        totalO += w.ownHours;
+        totalSlp += w.sleepHours;
+        if (w.overdrawn) overDays++;
+      });
+
+      document.getElementById('statStudy').textContent = totalS;
+      document.getElementById('statOwn').textContent = totalO;
+      document.getElementById('statSleep').textContent = totalSlp;
+
+      const totalAll = Math.max(1, totalS + totalO + totalSlp);
+      document.getElementById('barStudy').style.width = `${(totalS / totalAll) * 100}%`;
+      document.getElementById('barOwn').style.width = `${(totalO / totalAll) * 100}%`;
+      document.getElementById('barSleep').style.width = `${(totalSlp / totalAll) * 100}%`;
+
+      const badge = document.getElementById('staminaPreviewBadge');
+      if (overDays > 0) {
+        badge.textContent = `⚠️ 有 ${overDays} 天體力透支（將引發骨牌效應）`;
+        badge.className = 'px-3 py-1 rounded-full text-xs font-black bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/40 animate-pulse';
+      } else {
+        badge.textContent = `✓ 體力狀態：良好（零透支風險）`;
+        badge.className = 'px-3 py-1 rounded-full text-xs font-black bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30';
+      }
+
+      // 渲染 7 天迷你體力預警條
+      document.getElementById('miniWeeklyStaminaBar').innerHTML = weekly.map((w, idx) => {
+        const cls = w.overdrawn
+          ? 'bg-red-500/20 text-red-600 dark:text-red-300 border-red-500/40'
+          : w.triggeredDomino
+          ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
+          : 'bg-slate-100/80 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700';
+        return `
+          <button onclick="jumpToEditDayFromOverview(${idx})" class="py-1 px-0.5 rounded-lg border text-center leading-tight transition hover:scale-105 ${cls}">
+            <div class="text-[10px] font-bold">${DAYS[idx]}</div>
+            <div class="text-[10px] font-black">${w.endStamina}${w.overdrawn ? '⚠️' : ''}</div>
+          </button>
+        `;
+      }).join('');
+    }
+
+    /**************************************************************
+     * 7. 玩家加入、切換與移除控制
+     **************************************************************/
+    function openJoinModal() {
+      const hasPlayer = currentPlayerId && state.players[currentPlayerId];
+      document.getElementById('cancelModalBtn').classList.toggle('hidden', !hasPlayer);
+
+      const pList = Object.values(state.players);
+      const existBox = document.getElementById('modalExistingPlayersBox');
+      if (pList.length > 0) {
+        existBox.classList.remove('hidden');
+        document.getElementById('modalPlayerTabs').innerHTML = pList.map(p => `
+          <button onclick="switchPlayer('${p.id}'); closeJoinModal();" class="px-3 py-1.5 rounded-xl text-xs font-bold ${p.id === currentPlayerId ? 'bg-sky-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200'}">
+            ${escapeHtml(p.name)}
+          </button>
+        `).join('');
+      } else {
+        existBox.classList.add('hidden');
+      }
+
+      document.getElementById('joinModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('nicknameInput').focus(), 50);
+    }
+
+    function closeJoinModal() { document.getElementById('joinModal').classList.add('hidden'); }
+    function openLobbyModal() { document.getElementById('lobbyModal').classList.remove('hidden'); }
+    function closeLobbyModal() { document.getElementById('lobbyModal').classList.add('hidden'); }
+    function openVerseModal() { document.getElementById('verseModal').classList.remove('hidden'); }
+    function closeVerseModal() { document.getElementById('verseModal').classList.add('hidden'); }
+
+    async function confirmJoin() {
+      const input = document.getElementById('nicknameInput');
+      const name = input.value.trim();
+      if (!name) return alert('請輸入你的暱稱！');
+
+      const existing = Object.values(state.players).find(p => p.name === name);
+      if (existing) {
+        currentPlayerId = existing.id;
+        ensurePlayerPlan(state.players[currentPlayerId]);
+      } else {
+        const id = 'p_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+        state.players[id] = {
+          id,
+          name,
+          ready: false,
+          daysPlan: createDefaultPlayerPlan()
+        };
+        currentPlayerId = id;
+      }
+
+      localStorage.setItem('tc_player_id', currentPlayerId);
+      input.value = '';
+      closeJoinModal();
+      refreshUI();
+      await pushPlayerToCloud();
+    }
+
+    function switchPlayer(id) {
+      if (!state.players[id]) return;
+      currentPlayerId = id;
+      localStorage.setItem('tc_player_id', id);
+      refreshUI();
+    }
+
+    async function removeSinglePlayer(event, id, name) {
+      event.stopPropagation();
+      if (!confirm(`確定要移除玩家「${name}」嗎？`)) return;
+      delete state.players[id];
+      if (currentPlayerId === id) {
+        currentPlayerId = null;
+        localStorage.removeItem('tc_player_id');
+      }
+      try {
+        await fetch(`${FIREBASE_URL}/players/${id}.json`, { method: 'DELETE' });
+      } catch (e) {}
+      refreshUI();
+      if (!currentPlayerId) openJoinModal();
+    }
+
+    async function toggleReady() {
+      if (!currentPlayerId || !state.players[currentPlayerId]) return openJoinModal();
+      const p = state.players[currentPlayerId];
+      p.ready = !p.ready;
+      refreshUI();
+      await pushPlayerToCloud();
+      if (p.ready) showToast('✓ 已鎖定你的行程！');
+    }
+
+    async function resetAllData() {
+      if (!confirm('確定要清空所有玩家的資料，重新開始新的一局嗎？')) return;
+      state.players = {};
+      state.simState = { active: false, dayIndex: 0, maxDayReached: 0, seed: Date.now(), choices: {}, revealed: {}, verseOffsets: {}, sheetSynced: false };
+      localStorage.removeItem('tc_player_id');
+      currentPlayerId = null;
+      try {
+        await fetch(`${FIREBASE_URL}/players.json`, { method: 'DELETE' });
+        await fetch(`${FIREBASE_URL}/simState.json`, { method: 'DELETE' });
+      } catch (e) {}
+      closeLobbyModal();
+      openJoinModal();
+      refreshUI();
+    }
+
+    function refreshUI(skipCardRerender = false) {
+      const playerList = Object.values(state.players);
+      const curP = currentPlayerId ? state.players[currentPlayerId] : null;
+
+      document.getElementById('currentPlayerName').textContent = curP ? curP.name : '尚未加入';
+      document.getElementById('headerPlayerName').textContent = curP ? curP.name : '加入';
+
+      const readyBtn = document.getElementById('btnToggleReady');
+      if (curP && curP.ready) {
+        readyBtn.innerHTML = '<span>✓ 已鎖定行程（點擊可修改）</span>';
+        readyBtn.className = 'flex-1 py-3 px-4 rounded-xl font-black text-sm bg-slate-600 hover:bg-slate-500 text-white transition flex items-center justify-center gap-2';
+      } else {
+        readyBtn.innerHTML = '<span>✓ 鎖定我的行程（我排好了）</span>';
+        readyBtn.className = 'flex-1 py-3 px-4 rounded-xl font-black text-sm bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/25 transition flex items-center justify-center gap-2';
+      }
+
+      const readyCount = playerList.filter(p => p.ready).length;
+      const countStr = `${readyCount}/${playerList.length}`;
+      document.getElementById('headerReadyCount').textContent = countStr;
+      document.getElementById('bottomReadyCount').textContent = countStr;
+
+      document.getElementById('modalLobbyPlayerList').innerHTML = playerList.length === 0
+        ? `<div class="text-xs text-slate-400 py-2">目前還沒有人加入，請點右上角輸入暱稱</div>`
+        : playerList.map(p => {
+            const w = previewWeeklyStamina(p);
+            const s = w.reduce((acc, d) => acc + d.studyHours, 0);
+            const o = w.reduce((acc, d) => acc + d.ownHours, 0);
+            const safeName = escapeHtml(p.name);
+            return `
+              <div onclick="switchPlayer('${p.id}'); closeLobbyModal();" class="flex items-center justify-between px-3 py-2.5 rounded-xl bg-white/70 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700 cursor-pointer hover:bg-sky-500/10 text-xs transition">
+                <span class="font-black">${safeName} ${p.id === currentPlayerId ? '(你)' : ''}</span>
+                <div class="flex items-center gap-2">
+                  <span class="text-slate-500 dark:text-slate-400">讀 ${s}h / 自 ${o}h</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    p.ready ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300' : 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
+                  }">${p.ready ? '已鎖定' : '設定中'}</span>
+                  <button onclick="removeSinglePlayer(event, '${p.id}', '${safeName.replace(/'/g, '')}')" class="px-1.5 py-0.5 rounded-md text-slate-400 hover:bg-red-500/20 hover:text-red-500 font-bold" title="移除此玩家">✕</button>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+      const isSim = state.simState && state.simState.active;
+      document.getElementById('stickyBottomBar').classList.toggle('hidden', isSim);
+
+      if (isSim) {
+        document.getElementById('planningView').classList.add('hidden');
+        document.getElementById('simulationView').classList.remove('hidden');
+        renderSimulationDay();
+      } else {
+        document.getElementById('planningView').classList.remove('hidden');
+        document.getElementById('simulationView').classList.add('hidden');
+        if (!skipCardRerender) {
+          renderPlanCards();
+        }
+        updateStatsAndStaminaPreview();
+      }
+    }
+
+    /**************************************************************
+     * 8. 開始過這一週：全場 3 秒同步翻牌 ＋ 真實跨日骨牌演算法
+     **************************************************************/
+    function seededRandom(seed) {
+      let x = Math.sin(seed) * 10000;
+      return x - Math.floor(x);
+    }
+
+    function pickNonRepeatingIndex(dayIdx, poolLength, playerSeed) {
+      const indices = Array.from({ length: poolLength }, (_, i) => i);
+      for (let i = indices.length - 1; i > 0; i--) {
+        const r = seededRandom(playerSeed + i * 37);
+        const j = Math.floor(r * (i + 1));
+        const temp = indices[i];
+        indices[i] = indices[j];
+        indices[j] = temp;
+      }
+      return indices[dayIdx % poolLength];
+    }
+
+    async function startWeekSimulation() {
+      const playerList = Object.values(state.players);
+      if (playerList.length === 0) return alert('請至少加入一位玩家！');
+
+      state.simState = {
+        active: true,
+        dayIndex: 0,
+        maxDayReached: 0,
+        seed: Math.floor(Math.random() * 900000) + 100000,
+        choices: {},
+        revealed: {},
+        verseOffsets: {},
+        sheetSynced: false
+      };
+      refreshUI();
+      await pushFullSimStateToCloud();
+    }
+
+    async function backToPlanning() {
+      state.simState.active = false;
+      refreshUI();
+      await patchSimStateToCloud({ active: false });
+    }
+
+    // 單一路徑安全寫入秘密選擇（徹底消除多人搶寫覆蓋 BUG）
+    async function submitSecretChoice(dayIdx, playerId, optionKey) {
+      if (state.simState.revealed && state.simState.revealed[dayIdx]) return;
+      if (!state.simState.choices) state.simState.choices = {};
+      const key = `${dayIdx}_${playerId}`;
+      state.simState.choices[key] = optionKey;
+      refreshUI();
+
+      try {
+        await fetch(`${FIREBASE_URL}/simState/choices/${key}.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(optionKey)
+        });
+
+        // 寫入後向雲端確認最新 choices，若全員都選完則觸發全場同步翻牌
+        const res = await fetch(`${FIREBASE_URL}/simState/choices.json`);
+        const latestChoices = (res.ok ? await res.json() : null) || state.simState.choices;
+        state.simState.choices = latestChoices;
+
+        const allPlayers = Object.values(state.players);
+        const everyonePicked = allPlayers.length > 0 && allPlayers.every(p => {
+          const k = `${dayIdx}_${p.id}`;
+          return latestChoices[k] === 'A' || latestChoices[k] === 'B';
+        });
+
+        if (everyonePicked && !(state.simState.revealed && state.simState.revealed[dayIdx])) {
+          await triggerRevealDay(dayIdx);
+        }
+      } catch (e) {}
+    }
+
+    async function triggerRevealDay(dayIdx) {
+      if (!state.simState.revealed) state.simState.revealed = {};
+      state.simState.revealed[dayIdx] = true;
+
+      try {
+        await fetch(`${FIREBASE_URL}/simState/revealed/${dayIdx}.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(true)
+        });
+      } catch (e) {}
+
+      // 若是週日翻牌完成且尚未寫入試算表，僅由觸發翻牌的這台裝置執行單次靜默備份
+      if (dayIdx === 6 && !state.simState.sheetSynced && GAS_WEB_APP_URL) {
+        state.simState.sheetSynced = true;
+        await patchSimStateToCloud({ sheetSynced: true });
+        syncAllToGoogleSheet(false);
+      }
+
+      triggerThreeSecondFlipAnimation();
+    }
+
+    async function handleFlipOrNextClick() {
+      const dayIdx = state.simState.dayIndex || 0;
+      const isRevealed = state.simState.revealed && state.simState.revealed[dayIdx];
+
+      if (!isRevealed) {
+        const allPlayers = Object.values(state.players);
+        if (!state.simState.choices) state.simState.choices = {};
+        const patchChoices = {};
+        allPlayers.forEach(p => {
+          const k = `${dayIdx}_${p.id}`;
+          if (!state.simState.choices[k]) {
+            const autoPick = Math.random() < 0.5 ? 'A' : 'B';
+            state.simState.choices[k] = autoPick;
+            patchChoices[k] = autoPick;
+          }
+        });
+
+        if (Object.keys(patchChoices).length > 0) {
+          try {
+            await fetch(`${FIREBASE_URL}/simState/choices.json`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(patchChoices)
+            });
+          } catch (e) {}
+        }
+        await triggerRevealDay(dayIdx);
+      } else if (dayIdx < 6) {
+        const nextDay = dayIdx + 1;
+        state.simState.dayIndex = nextDay;
+        state.simState.maxDayReached = Math.max(state.simState.maxDayReached || 0, nextDay);
+        refreshUI();
+        await patchSimStateToCloud({ dayIndex: nextDay, maxDayReached: state.simState.maxDayReached });
+      }
+    }
+
+    function triggerThreeSecondFlipAnimation() {
+      if (isCountingDownFlip) return;
+      isCountingDownFlip = true;
+
+      const overlay = document.getElementById('flipCountdownOverlay');
+      const numEl = document.getElementById('flipCountdownNumber');
+      overlay.classList.remove('hidden');
+
+      let count = 3;
+      numEl.textContent = count;
+
+      const timer = setInterval(() => {
+        count--;
+        if (count > 0) {
+          numEl.textContent = count;
+        } else {
+          clearInterval(timer);
+          overlay.classList.add('hidden');
+          isCountingDownFlip = false;
+          refreshUI();
+        }
+      }, 850);
+    }
+
+    // 24 道不重複二選一情境題庫（含讀書 8 題、娛樂興趣 8 題、悠閒補眠 8 題，皆附真實體力增減）
+    function buildDailyDilemma(player, dayIdx, studyHours, ownHours, studyTasks, ownTasks, baseSeed) {
+      const pHash = player.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+      const playerSeed = (baseSeed || 12345) + pHash * 17;
+
+      const sTask = escapeHtml(studyTasks[0] || '自主讀書');
+      const oTask = escapeHtml(ownTasks[0] || '打手遊');
+
+      const studyDilemmas = [
+        {
+          prompt: `晚上正準備「${sTask}」時，死黨突然傳訊息：「欸打手遊五排缺一！打一場就好！」你要怎麼選？`,
+          optA: { label: `堅持原本計畫繼續${sTask}`, deltaS: 0, deltaO: 0, deltaStamina: -4, resultText: `你咬牙關掉手機通知繼續${sTask}，守住了讀書進度！` },
+          optB: { label: `不管了先上號打手遊！`, deltaS: -2, deltaO: +2, deltaStamina: -4, resultText: `結果「打一場就好」變成連打兩小時手遊，原本排的${sTask}直接泡湯！` }
+        },
+        {
+          prompt: `放學回家剛翻開書本準備「${sTask}」，發現追了好久的動漫居然剛更新最新一集！`,
+          optA: { label: `忍住不點開，先把進度讀完`, deltaS: +1, deltaO: 0, deltaStamina: -5, resultText: `你成功忍住誘惑專心把進度讀完，因為太專注還多推進了 1 小時效率！` },
+          optB: { label: `先看一集配晚餐再說`, deltaS: -1, deltaO: +1, deltaStamina: +4, resultText: `看了一集覺得太精彩不小心連看兩集，讀書時間少 1 小時，但心情超放鬆！` }
+        },
+        {
+          prompt: `正在「${sTask}」遇到超難題目卡關時，同學問你要不要乾脆出來買雞排跟手搖飲透透氣？`,
+          optA: { label: `拒絕出門，自己把題目搞懂`, deltaS: 0, deltaO: 0, deltaStamina: -8, resultText: `你留在書桌前苦思冥想終於解開題目，守住讀書時數但腦力消耗不少！` },
+          optB: { label: `出門買宵夜順便轉換心情`, deltaS: -1, deltaO: +1, deltaStamina: +5, resultText: `你跟同學去買了雞排聊得很開心，讀書少 1 小時但恢復了不少精神！` }
+        },
+        {
+          prompt: `才剛坐下來「${sTask}」15 分鐘，手機 IG / Threads 突然狂跳班上同學的限動八卦通知！`,
+          optA: { label: `直接開啟勿擾模式，把手機丟到床上`, deltaS: +1, deltaO: 0, deltaStamina: -4, resultText: `少了手機干擾後思緒超清晰，不知不覺多完成了 1 小時的讀書份量！` },
+          optB: { label: `好奇心爆發，拿起來滑一下下就好`, deltaS: -1, deltaO: +1, deltaStamina: -2, resultText: `結果從八卦限動一路滑到短影音，回過神來已經過了整整 1 小時！` }
+        },
+        {
+          prompt: `晚上「${sTask}」讀到一半覺得眼皮超重、精神渙散，這時你會怎麼處理？`,
+          optA: { label: `去洗把臉、站起來硬撐把進度讀完`, deltaS: 0, deltaO: 0, deltaStamina: -12, resultText: `你靠意志力撐完了預定進度，但大腦與身體都覺得加倍疲勞！` },
+          optB: { label: `先去聽歌放空或小睡 1 小時再說`, deltaS: -1, deltaO: +1, deltaStamina: +10, resultText: `雖然少讀了 1 小時，但讓大腦適時關機充電，體力恢復了不少！` }
+        },
+        {
+          prompt: `準備開始「${sTask}」前，發現書桌亂糟糟的，突然湧起一股想大掃除整理房間的衝動...`,
+          optA: { label: `識破這是逃避讀書的藉口，立刻翻開書本`, deltaS: 0, deltaO: 0, deltaStamina: -4, resultText: `你沒有被「假性忙碌」騙走時間，踏實地照計畫讀完了書！` },
+          optB: { label: `先花 1 小時把房間跟書桌整理乾淨`, deltaS: -1, deltaO: +1, deltaStamina: -5, resultText: `你把書桌擦得一塵不染還翻出舊照片，等準備讀書時已經少掉 1 小時了！` }
+        },
+        {
+          prompt: `好朋友傳語音來吐苦水，說他今天心情超差想找人陪他聊聊天，但你正準備「${sTask}」...`,
+          optA: { label: `溫柔告訴他你先讀完這段，晚點再回他`, deltaS: 0, deltaO: 0, deltaStamina: -3, resultText: `朋友理解地答應了，你也順利守住了今晚的讀書計畫。` },
+          optB: { label: `講義氣直接放下書本陪他講電話 1 小時`, deltaS: -1, deltaO: +1, deltaStamina: 0, resultText: `你陪好友聊了 1 小時幫他排解心情，雖然少讀了書，但友情大升溫！` }
+        },
+        {
+          prompt: `今天「${sTask}」的進度比預期提早了一點進入狀況，你決定接下來怎麼安排？`,
+          optA: { label: `趁手感好，多寫一回練習題衝刺`, deltaS: +1, deltaO: 0, deltaStamina: -8, resultText: `你乘勝追擊多讀了 1 小時進度，成就感爆棚！` },
+          optB: { label: `見好就收，提早 1 小時去打手遊犒賞自己`, deltaS: -1, deltaO: +1, deltaStamina: +4, resultText: `你提早收工去打手遊放鬆，勞逸結合心情超愉快！` }
+        }
+      ];
+
+      const ownDilemmas = [
+        {
+          prompt: `正在開心「${oTask}」時，突然想到明後天還有考試跟作業完全沒動，心裡有點猶豫...`,
+          optA: { label: `良心發現，提早收心去讀 1 小時書`, deltaS: +1, deltaO: -1, deltaStamina: -5, resultText: `你難得發揮自制力提早結束娛樂去翻書 1 小時，安心多了！` },
+          optB: { label: `不管了！今天就是要徹底投入「${oTask}」`, deltaS: 0, deltaO: +1, deltaStamina: +4, resultText: `你決定把煩惱拋在腦後繼續爽玩，度過超痛快的課餘時光！` }
+        },
+        {
+          prompt: `晚上在「${oTask}」到一半，朋友突然傳訊揪：「現在狀態超燙，要不要繼續加碼到半夜？」`,
+          optA: { label: `見好就收，照原定時間準時去休息`, deltaS: 0, deltaO: 0, deltaStamina: +8, resultText: `你果斷準時收工休息，成功保住了隔天的精神與體力！` },
+          optB: { label: `奉陪到底！繼續燃燒熱血加碼 2 小時`, deltaS: 0, deltaO: +2, deltaStamina: -18, resultText: `你們一路嗨到深夜，自己的事多做了 2 小時，但體力大透支！` }
+        },
+        {
+          prompt: `放學準備去「${oTask}」前，家人請你先幫忙跑腿買東西跟整理家務，這時你會？`,
+          optA: { label: `先幫忙完成家事，再把握剩下的時間複習功課`, deltaS: +1, deltaO: -1, deltaStamina: -5, resultText: `幫完家人後你順勢坐在書桌前讀了 1 小時書！` },
+          optB: { label: `火速解決家事，然後加倍補償自己的娛樂時間`, deltaS: 0, deltaO: +1, deltaStamina: -5, resultText: `你用最快速度忙完，接著毫無保留地享受屬於自己的放學時光！` }
+        },
+        {
+          prompt: `今天在「${oTask}」時遇到瓶頸（手遊連敗／練習卡關），心情有點悶，你決定？`,
+          optA: { label: `乾脆關掉去換個腦袋，拿書出來讀 1 小時`, deltaS: +1, deltaO: -1, deltaStamina: -4, resultText: `轉換心情去讀書反而意外地專注，把原本鬱悶的時間變成了學習進度！` },
+          optB: { label: `不服輸！再戰 1 小時直到成功為止`, deltaS: 0, deltaO: +1, deltaStamina: -10, resultText: `你堅持到底終於扳回一城，多花了 1 小時在自己的事上！` }
+        },
+        {
+          prompt: `朋友群組突然有人約去練舞／打球流汗，但你原本排了「${oTask}」...`,
+          optA: { label: `照原本的步調活動，結束後順便讀點書`, deltaS: +1, deltaO: 0, deltaStamina: -5, resultText: `你穩穩照著自己的節奏走，睡前還多讀了 1 小時書！` },
+          optB: { label: `熱血加入朋友的局，結束再去吃宵夜！`, deltaS: 0, deltaO: +2, deltaStamina: -12, resultText: `你跟朋友玩得超瘋還去吃了宵夜，自由活動多加 2 小時！` }
+        },
+        {
+          prompt: `滑手機看到別班同學在曬讀書筆記跟段考倒數，正在「${oTask}」的你突然一陣焦慮...`,
+          optA: { label: `立刻放下手邊娛樂，去書桌前讀 1 小時`, deltaS: +1, deltaO: -1, deltaStamina: -5, resultText: `你化焦慮為行動，馬上補了 1 小時讀書進度！` },
+          optB: { label: `直接滑掉假裝沒看到，繼續享受當下`, deltaS: 0, deltaO: +1, deltaStamina: +4, resultText: `你決定不被別人的節奏影響，繼續開心地做自己的事！` }
+        },
+        {
+          prompt: `今天「${oTask}」玩得超開心，但轉眼已經到了該洗澡睡覺的時間，你卻還意猶未盡...`,
+          optA: { label: `自律關機去洗澡睡覺，儲備明天體力`, deltaS: 0, deltaO: 0, deltaStamina: +8, resultText: `你展現了超強自制力準時上床，隔天精神飽滿！` },
+          optB: { label: `偷偷躲在被窩裡再多玩 1 小時`, deltaS: 0, deltaO: +1, deltaStamina: -14, resultText: `你在被窩裡多爽了 1 小時，但體力與睡眠都被偷偷扣分了！` }
+        },
+        {
+          prompt: `自由時光裡你突然靈光一閃，想學點新東西（練新舞步／新歌／新技能）...`,
+          optA: { label: `先把學校課業複習 1 小時再去研究`, deltaS: +1, deltaO: 0, deltaStamina: -6, resultText: `你先搞定了課業再研究興趣，兩邊都兼顧得超棒！` },
+          optB: { label: `全神貫注投入在興趣裡研究 2 小時`, deltaS: 0, deltaO: +2, deltaStamina: -10, resultText: `你完全沉浸在自己的興趣領域中，度過了超充實的時光！` }
+        }
+      ];
+
+      const freeDilemmas = [
+        {
+          prompt: `${DAYS[dayIdx]}這天你排了滿滿的休息與補眠，傍晚看著窗外的晚霞，你決定怎麼度過這段空檔？`,
+          optA: { label: `趁精神正好，拿書出來複習 1 小時`, deltaS: +1, deltaO: 0, deltaStamina: -4, resultText: `你把握空檔多讀了 1 小時書，感覺特別充實！` },
+          optB: { label: `打開手機打手遊放鬆 1 小時`, deltaS: 0, deltaO: +1, deltaStamina: 0, resultText: `你悠閒地打了 1 小時手遊，享受難得的清閒傍晚。` }
+        },
+        {
+          prompt: `${DAYS[dayIdx]}原本打算一路補眠，這時同學突然傳訊問你某題作業怎麼寫...`,
+          optA: { label: `把課本拿出來研究並順便複習 1 小時`, deltaS: +1, deltaO: 0, deltaStamina: -4, resultText: `為了教同學，你自己也順便把這章節讀熟了 1 小時！` },
+          optB: { label: `回他「我也不會欸」然後跟他聊八卦 1 小時`, deltaS: 0, deltaO: +1, deltaStamina: 0, resultText: `結果兩個人都沒寫作業，反而在線上開心地聊了 1 小時天！` }
+        },
+        {
+          prompt: `${DAYS[dayIdx]}睡飽起床後精神超好，看著大把的空閒時間，你身體裡的熱血突然蠢蠢欲動...`,
+          optA: { label: `趁頭腦最清醒，自主讀書 2 小時`, deltaS: +2, deltaO: 0, deltaStamina: -8, resultText: `因為睡得超飽，你一口氣高效讀了 2 小時書！` },
+          optB: { label: `換上運動服去跳舞／打球流汗 2 小時`, deltaS: 0, deltaO: +2, deltaStamina: -6, resultText: `你盡情運動流汗了 2 小時，多巴胺大爆發心情超爽快！` }
+        },
+        {
+          prompt: `${DAYS[dayIdx]}外面突然下起微雨，聽著雨聲的休息時段，你最想做什麼？`,
+          optA: { label: `泡杯熱飲坐在窗邊背單字、算數學 1 小時`, deltaS: +1, deltaO: 0, deltaStamina: -4, resultText: `伴著雨聲讀書意外地超有氣氛，多累積了 1 小時學習！` },
+          optB: { label: `窩在沙發上看影片或聽歌放空 1 小時`, deltaS: 0, deltaO: +1, deltaStamina: +4, resultText: `你在雨天享受了超愜意的 1 小時個人時光！` }
+        },
+        {
+          prompt: `${DAYS[dayIdx]}吃飽飯後沒有特別排事，家人問你要不要一起去附近散步逛街？`,
+          optA: { label: `留在房間書桌前，幫這週的課業做重點整理`, deltaS: +1, deltaO: 0, deltaStamina: -4, resultText: `你利用這段空檔整理好筆記，讀書時數 +1 小時！` },
+          optB: { label: `跟家人一起出門逛街吃點心 1 小時`, deltaS: 0, deltaO: +1, deltaStamina: +4, resultText: `你跟家人邊走邊聊還吃了點心，度過溫馨的 1 小時！` }
+        },
+        {
+          prompt: `${DAYS[dayIdx]}在房間休息時，突然翻到之前買卻一直沒看的書與手遊紀錄...`,
+          optA: { label: `靜下心來閱讀學習 1 小時`, deltaS: +1, deltaO: 0, deltaStamina: -3, resultText: `你度過了安靜專注的 1 小時閱讀時光！` },
+          optB: { label: `打開手機打手遊破關 1 小時`, deltaS: 0, deltaO: +1, deltaStamina: 0, resultText: `你開心地破關 1 小時，享受沒有壓力的自由時間！` }
+        },
+        {
+          prompt: `${DAYS[dayIdx]}放學路上經過常去的飲料店與書局，因為今晚排了滿滿補眠時間很充裕...`,
+          optA: { label: `走進書局翻翻參考書、順便自習 1 小時`, deltaS: +1, deltaO: 0, deltaStamina: -4, resultText: `你在書局吹冷氣安靜讀了 1 小時書，意外地很有收穫！` },
+          optB: { label: `買杯手搖飲散步聽歌放空 1 小時`, deltaS: 0, deltaO: +1, deltaStamina: +4, resultText: `你喝著飲料散步放空了 1 小時，身心都得到了療癒！` }
+        },
+        {
+          prompt: `${DAYS[dayIdx]}這天過得特別清閒，睡前看著明天即將到來的行程，你決定？`,
+          optA: { label: `睡前花 1 小時預習並把書包整理好`, deltaS: +1, deltaO: 0, deltaStamina: -4, resultText: `你做好了萬全預習準備，帶著滿滿的安全感入睡！` },
+          optB: { label: `戴上耳機滑手機放鬆 1 小時再睡`, deltaS: 0, deltaO: +1, deltaStamina: -2, resultText: `你聽著喜歡的歌滑手機 1 小時，悠哉地結束這一天。` }
+        }
+      ];
+
+      if (studyHours === 0 && ownHours === 0) {
+        const idx = pickNonRepeatingIndex(dayIdx, freeDilemmas.length, playerSeed + 303);
+        return freeDilemmas[idx];
+      } else if (studyHours >= ownHours) {
+        const idx = pickNonRepeatingIndex(dayIdx, studyDilemmas.length, playerSeed + 101);
+        return studyDilemmas[idx];
+      } else {
+        const idx = pickNonRepeatingIndex(dayIdx, ownDilemmas.length, playerSeed + 202);
+        return ownDilemmas[idx];
+      }
+    }
+
+    // 連貫式整週模擬：每天的二選一體力變動會真實累積並觸發隔天骨牌效應
+    function simulatePlayerWeek(player, allPlayers, baseSeed) {
+      const daysPlan = ensurePlayerPlan(player);
+      const choices = (state.simState && state.simState.choices) || {};
+      const revealed = (state.simState && state.simState.revealed) || {};
+      const results = [];
+      let dominoDebt = 0;
+
+      // 預先計算其他玩家每天的活動清單，減少重複計算
+      const othersTasksByDay = {};
+      for (let d = 0; d < 7; d++) {
+        othersTasksByDay[d] = [];
+        allPlayers.forEach(other => {
+          if (other.id === player.id) return;
+          const om = computeDayMetrics(ensurePlayerPlan(other)[d], d);
+          othersTasksByDay[d].push({ name: other.name, tasks: [...om.ownTasks, ...om.studyTasks].filter(Boolean) });
+        });
+      }
+
+      for (let d = 0; d < 7; d++) {
+        const m = computeDayMetrics(daysPlan[d], d);
+        const startStamina = Math.max(15, Math.min(100, 100 - dominoDebt));
+        const triggeredDomino = dominoDebt >= 20;
+
+        let effectiveStudy = m.studyHours;
+        let effectiveOwn = m.ownHours;
+        let dayStaminaDelta = m.deltaStamina;
+        const logs = [];
+
+        logs.push({
+          type: 'normal',
+          text: `📊 起始體力 ${startStamina}｜排定讀書 ${m.studyHours}h、自己的事 ${m.ownHours}h、睡眠 ${m.sleepHours}h。`
+        });
+
+        // 體力透支連鎖骨牌效應
+        if (triggeredDomino) {
+          let penalty = 2;
+          const lostStudy = Math.min(penalty, effectiveStudy);
+          effectiveStudy -= lostStudy;
+          penalty -= lostStudy;
+          const lostOwn = Math.min(penalty, effectiveOwn);
+          effectiveOwn -= lostOwn;
+          const totalLost = lostStudy + lostOwn;
+
+          if (totalLost > 0) {
+            logs.push({
+              type: 'domino',
+              text: `🁢 【體力透支・連鎖骨牌效應】前一天熬夜或透支導致今日起始體力僅 ${startStamina}，放學後累到趴在桌上睡著，原定行程被迫中斷 ${totalLost} 小時！`
+            });
+          } else {
+            logs.push({
+              type: 'domino',
+              text: `🁢 【體力透支・連鎖骨牌效應】前一天疲勞累積導致今日起始體力僅 ${startStamina}，幸好今天安排了足夠的休息回血！`
+            });
+          }
+        }
+
+        // 同儕巧遇檢查
+        const myTasks = [...m.ownTasks, ...m.studyTasks].filter(Boolean);
+        let matched = null;
+        if (myTasks.length > 0) {
+          for (const other of othersTasksByDay[d]) {
+            const common = myTasks.find(t => other.tasks.includes(t));
+            if (common) {
+              matched = { name: other.name, task: common };
+              break;
+            }
+          }
+        }
+        if (matched) {
+          logs.push({
+            type: 'good',
+            text: `🤝 跟 ${escapeHtml(matched.name)} 在${DAYS[d]}不約而同都排了「${escapeHtml(matched.task)}」，直接揪團同行！`
+          });
+        }
+
+        // 二選一抉擇（翻牌後套用實際影響與體力變化）
+        const dilemma = buildDailyDilemma(player, d, m.studyHours, m.ownHours, m.studyTasks, m.ownTasks, baseSeed);
+        const choiceKey = `${d}_${player.id}`;
+        const picked = choices[choiceKey] || null;
+        const isRevealed = !!revealed[d];
+
+        if (isRevealed && (picked === 'A' || picked === 'B')) {
+          const chosenObj = picked === 'A' ? dilemma.optA : dilemma.optB;
+          if (chosenObj.deltaS < 0) {
+            const actualLostS = Math.min(effectiveStudy, Math.abs(chosenObj.deltaS));
+            effectiveStudy -= actualLostS;
+            if (chosenObj.deltaO > 0) effectiveOwn += Math.max(1, actualLostS);
+          } else {
+            effectiveStudy += chosenObj.deltaS;
+            effectiveOwn = Math.max(0, effectiveOwn + chosenObj.deltaO);
+          }
+          dayStaminaDelta += (chosenObj.deltaStamina || 0);
+          logs.push({
+            type: chosenObj.deltaS >= 0 && (chosenObj.deltaStamina || 0) >= -6 ? 'good' : 'choice',
+            text: `🎴 【翻牌揭曉：選 ${picked}】${chosenObj.resultText}`
+          });
+        }
+
+        const endStamina = Math.min(100, startStamina + dayStaminaDelta);
+        const overdrawn = endStamina < 0;
+
+        if (overdrawn) {
+          logs.push({
+            type: 'bad',
+            text: `⚠️ 今日結束體力 ${endStamina}（已透支！），疲勞骨牌將在明天倒下，拖累明天的精神與進度！`
+          });
+        }
+
+        dominoDebt = 0;
+        if (endStamina < 0) dominoDebt += Math.abs(endStamina) + 15;
+        if (m.sleepHours < 6) dominoDebt += (6 - m.sleepHours) * 12;
+
+        results.push({
+          day: d,
+          plannedStudy: m.studyHours,
+          plannedOwn: m.ownHours,
+          sleepHours: m.sleepHours,
+          hobbyHours: m.hobbyHours,
+          funHours: m.funHours,
+          startStamina,
+          endStamina,
+          overdrawn,
+          triggeredDomino,
+          effectiveStudy,
+          effectiveOwn,
+          logs,
+          dilemma,
+          picked,
+          isRevealed
+        });
+      }
+
+      return results;
+    }
+
+    function renderSimulationDay() {
+      const dayIdx = state.simState.dayIndex || 0;
+      const maxReached = Math.max(state.simState.maxDayReached || 0, dayIdx);
+      const allPlayers = Object.values(state.players);
+      const isRevealed = !!(state.simState.revealed && state.simState.revealed[dayIdx]);
+
+      const sortedPlayers = [...allPlayers].sort((a, b) => {
+        if (a.id === currentPlayerId) return -1;
+        if (b.id === currentPlayerId) return 1;
+        return 0;
+      });
+
+      document.getElementById('simDayBadge').textContent = DAYS[dayIdx];
+      document.getElementById('simStatusTitle').textContent = isRevealed
+        ? `${DAYS[dayIdx]}・全場翻牌結果揭曉！`
+        : `${DAYS[dayIdx]}・秘密抉擇階段（蓋牌中）`;
+
+      const pickedCount = allPlayers.filter(p => {
+        const k = `${dayIdx}_${p.id}`;
+        return state.simState.choices && (state.simState.choices[k] === 'A' || state.simState.choices[k] === 'B');
+      }).length;
+
+      const actionBtn = document.getElementById('btnFlipOrNext');
+      if (!isRevealed) {
+        actionBtn.disabled = false;
+        actionBtn.textContent = `🎴 立即全場同步翻牌 (${pickedCount}/${allPlayers.length})`;
+        actionBtn.className = 'flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-black text-sm bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/30 transition';
+      } else if (dayIdx >= 6) {
+        actionBtn.disabled = true;
+        actionBtn.textContent = '🎉 已完成整週（查看下方檢測報告）';
+        actionBtn.className = 'flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-black text-sm bg-slate-500/60 text-white cursor-not-allowed';
+      } else {
+        actionBtn.disabled = false;
+        actionBtn.textContent = `進入 ${DAYS[dayIdx + 1]} ▶`;
+        actionBtn.className = 'flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-black text-sm bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white shadow-lg shadow-sky-600/25 transition';
+      }
+
+      // 進度條：鎖定尚未抵達的未來天數，防止誤點跳過
+      document.getElementById('dayStepper').innerHTML = DAYS.map((dName, idx) => {
+        const active = idx === dayIdx;
+        const canClick = idx <= maxReached;
+        return `
+          <button ${canClick ? `onclick="jumpToSimDay(${idx})"` : 'disabled'}
+            class="py-2 rounded-xl font-black text-xs border transition ${
+              active
+                ? 'bg-sky-600 text-white border-sky-400 shadow-md'
+                : canClick
+                ? 'bg-sky-500/15 text-sky-600 dark:text-sky-300 border-sky-500/30 hover:bg-sky-500/25'
+                : 'bg-white/40 dark:bg-slate-900/40 text-slate-400/60 border-slate-200/60 dark:border-slate-800/60 cursor-not-allowed'
+            }">
+            ${dName}
+          </button>
+        `;
+      }).join('');
+
+      const cardsContainer = document.getElementById('simPlayerCards');
+      cardsContainer.innerHTML = sortedPlayers.map(p => {
+        const isMe = p.id === currentPlayerId;
+        const weekResults = simulatePlayerWeek(p, allPlayers, state.simState.seed);
+        const res = weekResults[dayIdx];
+        const safeName = escapeHtml(p.name);
+
+        const staminaBadge = res.endStamina < 0
+          ? `<span class="px-2 py-0.5 rounded-md bg-red-500/20 text-red-600 dark:text-red-300">體力 ${res.endStamina} (透支)</span>`
+          : `<span class="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-300">體力 ${res.endStamina}</span>`;
+
+        let choiceBlockHtml = '';
+        if (!isRevealed) {
+          if (isMe) {
+            choiceBlockHtml = `
+              <div class="p-3.5 rounded-xl bg-gradient-to-br from-sky-500/10 via-blue-500/10 to-amber-500/10 border border-sky-500/30 space-y-2.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-black text-sky-600 dark:text-sky-300">🔒 秘密抉擇（全員選定後同步翻牌）</span>
+                  ${res.picked ? `<span class="text-[10px] font-bold text-emerald-500">✓ 已蓋牌選定 ${res.picked}</span>` : `<span class="text-[10px] font-bold text-amber-500 animate-pulse">請秘密選擇</span>`}
+                </div>
+                <p class="text-xs font-bold text-slate-700 dark:text-slate-200 leading-relaxed">${res.dilemma.prompt}</p>
+                <div class="grid grid-cols-1 gap-2 pt-1">
+                  <button onclick="submitSecretChoice(${dayIdx}, '${p.id}', 'A')"
+                    class="w-full py-2.5 px-3 rounded-xl text-left text-xs font-bold border transition flex items-center justify-between ${
+                      res.picked === 'A'
+                        ? 'bg-sky-600 text-white border-sky-400 shadow'
+                        : 'bg-white/80 dark:bg-slate-900/80 hover:bg-sky-500/20 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700'
+                    }">
+                    <span>A. ${res.dilemma.optA.label}</span>
+                    ${res.picked === 'A' ? '<span>🔒</span>' : ''}
+                  </button>
+                  <button onclick="submitSecretChoice(${dayIdx}, '${p.id}', 'B')"
+                    class="w-full py-2.5 px-3 rounded-xl text-left text-xs font-bold border transition flex items-center justify-between ${
+                      res.picked === 'B'
+                        ? 'bg-amber-600 text-white border-amber-400 shadow'
+                        : 'bg-white/80 dark:bg-slate-900/80 hover:bg-amber-500/20 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700'
+                    }">
+                    <span>B. ${res.dilemma.optB.label}</span>
+                    ${res.picked === 'B' ? '<span>🔒</span>' : ''}
+                  </button>
+                </div>
+              </div>
+            `;
+          } else {
+            choiceBlockHtml = `
+              <div class="p-4 rounded-xl bg-slate-200/60 dark:bg-slate-800/70 border border-dashed border-slate-400/50 text-center space-y-1">
+                <div class="text-2xl">${res.picked ? '🃏' : '⏳'}</div>
+                <div class="text-xs font-black ${res.picked ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'}">
+                  ${res.picked ? `${safeName} 已完成秘密蓋牌！` : `等待 ${safeName} 做出選擇...`}
+                </div>
+                <div class="text-[11px] text-slate-400">全場同步翻牌後揭曉他的決定</div>
+              </div>
+            `;
+          }
+        } else {
+          // 修正 BUG：翻牌後連同情境題目一併顯示，大螢幕才看得懂！
+          const chosenLabel = res.picked === 'A' ? `A. ${res.dilemma.optA.label}` : `B. ${res.dilemma.optB.label}`;
+          choiceBlockHtml = `
+            <div class="animate-flip-in p-3.5 rounded-xl bg-gradient-to-r ${res.picked === 'A' ? 'from-sky-500/20 to-blue-500/20 border-sky-400/50' : 'from-amber-500/20 to-orange-500/20 border-amber-400/50'} border space-y-1.5">
+              <div class="text-[10px] font-black uppercase tracking-wider opacity-80">🎴 翻牌揭曉・${safeName} 遇到的狀況</div>
+              <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">${res.dilemma.prompt}</p>
+              <div class="text-xs font-black text-slate-900 dark:text-white pt-1 border-t border-slate-400/20">👉 選擇：${chosenLabel}</div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="cinema-card p-4 sm:p-5 flex flex-col justify-between space-y-3 ${isMe ? 'ring-2 ring-sky-500' : ''}">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between border-b border-slate-200/70 dark:border-slate-700/70 pb-2.5">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-black text-base text-sky-700 dark:text-sky-300">${safeName}</span>
+                  ${isMe ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-sky-500 text-white">你</span>` : ''}
+                </div>
+                <div class="flex flex-wrap gap-1 text-[11px] font-bold">
+                  <span class="px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-600 dark:text-sky-300">讀書 ${res.effectiveStudy}h</span>
+                  <span class="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-300">自己 ${res.effectiveOwn}h</span>
+                  ${staminaBadge}
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                ${res.logs.map(l => {
+                  let boxStyle = 'bg-white/60 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700';
+                  if (l.type === 'good') boxStyle = 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-800 dark:text-emerald-200 font-bold';
+                  if (l.type === 'bad') boxStyle = 'bg-red-500/15 border border-red-500/40 text-red-800 dark:text-red-200 font-bold';
+                  if (l.type === 'domino') boxStyle = 'animate-domino bg-red-600/20 border-2 border-red-500/60 text-red-700 dark:text-red-200 font-black';
+                  if (l.type === 'choice') boxStyle = 'bg-amber-500/15 border border-amber-500/40 text-amber-800 dark:text-amber-200 font-bold';
+                  return `<div class="p-2.5 rounded-xl text-xs leading-relaxed ${boxStyle}">${l.text}</div>`;
+                }).join('')}
+              </div>
+
+              ${choiceBlockHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const summaryBox = document.getElementById('finalSummaryBox');
+      if (dayIdx === 6 && isRevealed) {
+        summaryBox.classList.remove('hidden');
+        renderFinalSummary(sortedPlayers, allPlayers);
+      } else {
+        summaryBox.classList.add('hidden');
+      }
+    }
+
+    async function jumpToSimDay(idx) {
+      const maxReached = Math.max(state.simState.maxDayReached || 0, state.simState.dayIndex || 0);
+      if (idx > maxReached) return;
+      state.simState.dayIndex = idx;
+      refreshUI();
+      await patchSimStateToCloud({ dayIndex: idx });
+    }
+
+    /**************************************************************
+     * 9. 週末週計畫檢測、全場之最頒獎台與 36 則聖經經文配對
+     **************************************************************/
+    function diagnosePlayerWeek(player, allPlayers, baseSeed) {
+      const weekResults = simulatePlayerWeek(player, allPlayers, baseSeed);
+      let planS = 0, planO = 0, realS = 0, realO = 0, totalSleep = 0, overdrawnDays = 0;
+      let hobbyHours = 0, funHours = 0, dominoCount = 0;
+      let resistCount = 0, temptCount = 0;
+
+      weekResults.forEach(r => {
+        planS += r.plannedStudy;
+        planO += r.plannedOwn;
+        realS += r.effectiveStudy;
+        realO += r.effectiveOwn;
+        totalSleep += r.sleepHours;
+        hobbyHours += r.hobbyHours;
+        funHours += r.funHours;
+        if (r.overdrawn) overdrawnDays++;
+        if (r.triggeredDomino) dominoCount++;
+        if (r.picked === 'A') resistCount++;
+        else if (r.picked === 'B') temptCount++;
+      });
+
+      const avgSleep = (totalSleep / 7).toFixed(1);
+      const studyDiff = realS - planS;
+
+      let diagCat = 'balanced';
+      let title = '⚖️ 晴空下的時間平衡大師';
+      let evaluation = '';
+      let suggestion = '';
+
+      if (overdrawnDays >= 3 || dominoCount >= 2 || totalSleep < 40) {
+        diagCat = 'burnout';
+        title = dominoCount >= 3 ? '🁢 骨牌全倒的爆肝戰士' : '🕯️ 兩頭燒的午夜油燈';
+        evaluation = `你這週共有 ${overdrawnDays} 天體力透支，並觸發了 ${dominoCount} 次「體力透支連鎖骨牌效應」，平均每天只睡 ${avgSleep} 小時。過度熬夜導致隔天精神崩盤，實際讀書降為 ${realS}h。`;
+        suggestion = `【調整建議】睡眠是撐起整週時間骨牌的第一張牌！建議把平日睡覺滑桿拉回 23:00 前，確保每天睡滿 7 小時，才能守住隔天的體力與效率。`;
+      } else if (studyDiff <= -3 || (planS >= 10 && temptCount >= 5)) {
+        diagCat = 'distracted';
+        title = studyDiff <= -5 ? '🌊 隨波逐流的靈感旅人' : '🎮 計畫趕不上變化代表';
+        evaluation = `你在排卡片時很有抱負（原定讀書 ${planS}h），但在經歷一週的同步翻牌誘惑時，有 ${temptCount} 天選擇了順從誘惑，導致實際讀書降為 ${realS}h，自己的事則增加到 ${realO}h。`;
+        suggestion = `【調整建議】別把讀書排得太緊繃！建議採用「晚上黃金時段先專心讀書，睡前留 1 小時給娛樂」的節奏，讀書時把手機開勿擾，幫自己守住界線。`;
+      } else if (realS >= 20 && overdrawnDays <= 1) {
+        diagCat = 'diligent';
+        title = hobbyHours >= 6 ? '🌟 文武雙全的自律領航員' : '📘 堅定築夢的勤勉學霸';
+        evaluation = `表現非常亮眼！你這週實際投入了 ${realS} 小時自主讀書，面對 7 天的突發狀況有 ${resistCount} 天堅守原則，同時還能將日均睡眠維持在 ${avgSleep} 小時，沒有讓體力陷入惡性骨牌效應。`;
+        suggestion = `【調整建議】你已經具備極佳的自律習慣與執行力！建議在保持進度的同時，每週固定保留時段給運動興趣（如跳舞、打球），讓身心維持長久彈性。`;
+      } else if (realO >= 35 && realS < 10) {
+        diagCat = 'hedonist';
+        title = hobbyHours > funHours ? '🕺 熱血燃燒的社團才藝王' : '🏖️ 無憂無慮的青春漫遊者';
+        evaluation = `你非常懂得享受課餘時光！這週共花了 ${realO} 小時在做自己的事（包含興趣 ${hobbyHours}h、娛樂日常 ${funHours}h），但自主讀書僅有 ${realS} 小時，生活重心明顯偏向當下的快樂。`;
+        suggestion = `【調整建議】擁有豐富的興趣與社交是很棒的事，但為了避免段考前夕陷入恐慌，建議從下週起，每天放學後先固定撥出 2 小時完成核心複習，再去盡情享受娛樂！`;
+      } else if (totalSleep >= 66) {
+        diagCat = 'sloth_rest';
+        title = '💤 與床難分難捨的睡神代表';
+        evaluation = `這週你的睡眠非常飽足（總睡眠達 ${totalSleep}h，日均 ${avgSleep}h），完全沒有任何體力透支，但投入自主讀書（${realS}h）與探索興趣的時數相對偏少。`;
+        suggestion = `【調整建議】充足休息後，就是起身行動的時刻！既然電力已經充飽，下週不妨在晚上黃金時段為自己設定一個熱血的小目標動起來吧！`;
+      } else {
+        diagCat = 'balanced';
+        title = '⚖️ 晴空下的時間平衡大師';
+        evaluation = `你的時間配置非常成熟穩健！本週實際讀書 ${realS}h、自己的事 ${realO}h（含運動興趣 ${hobbyHours}h）、日均睡眠 ${avgSleep}h，在學業進度、個人喜好與體力恢復之間取得了極佳的平衡。`;
+        suggestion = `【調整建議】你很清楚自己的體力極限與生活優先順序！請繼續保持這份「讀書時專注、放鬆時盡興、睡覺時安穩」的良性循環。`;
+      }
+
+      let score = 78;
+      if (realS >= 14 && realS <= 30) score += 10;
+      else if (realS < 6) score -= 12;
+      if (realO >= 12 && realO <= 35) score += 6;
+      if (totalSleep >= 48 && totalSleep <= 64) score += 8;
+      score -= overdrawnDays * 7;
+      score -= dominoCount * 5;
+      score -= Math.max(0, Math.abs(studyDiff) - 2) * 2;
+      score = Math.max(45, Math.min(99, score));
+
+      const matchingVerses = BIBLE_VERSES.filter(v => v.cat === diagCat);
+      const pHash = player.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+      const offset = (state.simState.verseOffsets && state.simState.verseOffsets[player.id]) || 0;
+      const vIdx = (pHash + offset) % matchingVerses.length;
+      const pickedVerse = matchingVerses[vIdx] || BIBLE_VERSES[0];
+
+      return {
+        planS, planO, realS, realO, totalSleep, avgSleep, overdrawnDays, dominoCount, resistCount,
+        score, diagCat, title, evaluation, suggestion, verse: pickedVerse
+      };
+    }
+
+    async function cyclePlayerVerse(playerId) {
+      if (!state.simState.verseOffsets) state.simState.verseOffsets = {};
+      state.simState.verseOffsets[playerId] = ((state.simState.verseOffsets[playerId] || 0) + 1);
+      refreshUI();
+      try {
+        await fetch(`${FIREBASE_URL}/simState/verseOffsets/${playerId}.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(state.simState.verseOffsets[playerId])
+        });
+      } catch (e) {}
+    }
+
+    function renderFinalSummary(sortedPlayers, allPlayers) {
+      const diagList = sortedPlayers.map(p => ({ player: p, d: diagnosePlayerWeek(p, allPlayers, state.simState.seed) }));
+
+      // 渲染全場之最頒獎條
+      if (diagList.length > 0) {
+        const topScore = [...diagList].sort((a, b) => b.d.score - a.d.score)[0];
+        const topResist = [...diagList].sort((a, b) => b.d.resistCount - a.d.resistCount)[0];
+        const topDomino = [...diagList].sort((a, b) => (b.d.dominoCount * 10 + b.d.overdrawnDays) - (a.d.dominoCount * 10 + a.d.overdrawnDays))[0];
+
+        document.getElementById('classAwardsStrip').innerHTML = `
+          <div class="p-3 rounded-xl bg-sky-500/15 border border-sky-500/30 text-center">
+            <div class="text-[11px] font-bold text-sky-600 dark:text-sky-300">👑 全場最高檢測分</div>
+            <div class="font-black text-sm mt-0.5">${escapeHtml(topScore.player.name)}（${topScore.d.score} 分）</div>
+          </div>
+          <div class="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-center">
+            <div class="text-[11px] font-bold text-emerald-600 dark:text-emerald-300">🛡️ 全場最強定力王</div>
+            <div class="font-black text-sm mt-0.5">${escapeHtml(topResist.player.name)}（堅守 ${topResist.d.resistCount}/7 天）</div>
+          </div>
+          <div class="p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-center">
+            <div class="text-[11px] font-bold text-amber-600 dark:text-amber-300">🁢 骨牌透支關注獎</div>
+            <div class="font-black text-sm mt-0.5">${escapeHtml(topDomino.player.name)}（骨牌 ${topDomino.d.dominoCount} 次）</div>
+          </div>
+        `;
+      }
+
+      const container = document.getElementById('finalSummaryGrid');
+      container.innerHTML = diagList.map(({ player: p, d }) => {
+        const isMe = p.id === currentPlayerId;
+        const safeName = escapeHtml(p.name);
+
+        return `
+          <div class="p-5 rounded-2xl bg-white/90 dark:bg-slate-900/90 border ${isMe ? 'border-2 border-sky-500' : 'border-slate-200 dark:border-slate-700'} shadow-lg space-y-3.5">
+            <div class="flex items-start justify-between gap-2 border-b border-slate-200/80 dark:border-slate-800 pb-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-black text-lg text-sky-700 dark:text-sky-300">${safeName}</span>
+                  <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                    檢測評分 ${d.score} 分
+                  </span>
+                </div>
+                <div class="mt-1 inline-block px-3 py-1 rounded-xl text-xs font-black bg-gradient-to-r from-sky-600 to-blue-600 text-white shadow-sm">
+                  ${d.title}
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+              <div class="p-2 rounded-xl bg-sky-500/10 border border-sky-500/20">
+                <div class="text-[10px] text-slate-500 dark:text-slate-400">📘 讀書 (原定→實際)</div>
+                <div class="font-black text-sky-600 dark:text-sky-300 mt-0.5">${d.planS}h → ${d.realS}h</div>
+              </div>
+              <div class="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <div class="text-[10px] text-slate-500 dark:text-slate-400">🎮 自己 (原定→實際)</div>
+                <div class="font-black text-amber-600 dark:text-amber-300 mt-0.5">${d.planO}h → ${d.realO}h</div>
+              </div>
+              <div class="p-2 rounded-xl bg-teal-500/10 border border-teal-500/20">
+                <div class="text-[10px] text-slate-500 dark:text-slate-400">💤 總睡眠 (日均)</div>
+                <div class="font-black text-teal-600 dark:text-teal-300 mt-0.5">${d.totalSleep}h (${d.avgSleep}h)</div>
+              </div>
+              <div class="p-2 rounded-xl ${d.dominoCount > 0 ? 'bg-red-500/10 border-red-500/30' : 'bg-emerald-500/10 border-emerald-500/20'} border">
+                <div class="text-[10px] text-slate-500 dark:text-slate-400">🁢 骨牌透支次數</div>
+                <div class="font-black ${d.dominoCount > 0 ? 'text-red-500' : 'text-emerald-500'} mt-0.5">${d.dominoCount} 次</div>
+              </div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-100/80 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700 space-y-1.5 text-xs leading-relaxed">
+              <div class="font-black text-slate-800 dark:text-slate-100">📋 週計畫檢測分析：</div>
+              <p class="text-slate-600 dark:text-slate-300">${d.evaluation}</p>
+              <p class="text-sky-700 dark:text-sky-300 font-bold pt-1">${d.suggestion}</p>
+            </div>
+
+            <div class="p-4 rounded-xl bg-gradient-to-br from-sky-500/15 via-blue-500/10 to-amber-500/15 border border-sky-500/30 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-black text-sky-700 dark:text-sky-300">
+                  📖 給你的專屬聖經經文・【${d.verse.ref}】
+                </span>
+                <button onclick="cyclePlayerVerse('${p.id}')" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-white/80 dark:bg-slate-800 hover:bg-sky-500/20 text-sky-600 dark:text-sky-300 border border-sky-500/30 transition">
+                  🔄 換一則經文
+                </button>
+              </div>
+              <blockquote class="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100 leading-relaxed">
+                「${d.verse.text}」
+              </blockquote>
+              <div class="text-xs text-amber-800 dark:text-amber-200 font-bold pt-1 border-t border-sky-500/20">
+                💡 經文勉勵：${d.verse.advice}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAllVersesModalList() {
+      const box = document.getElementById('allVersesList');
+      box.innerHTML = BIBLE_VERSES.map(v => `
+        <div class="p-3.5 rounded-xl bg-white/70 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="font-black text-xs text-sky-700 dark:text-sky-300">#${v.id} 【${v.ref}】</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-600 dark:text-sky-300">${v.catName}</span>
+          </div>
+          <p class="text-xs font-bold text-slate-800 dark:text-slate-100 leading-relaxed">「${v.text}」</p>
+          <p class="text-[11px] text-amber-700 dark:text-amber-300">💡 建議：${v.advice}</p>
+        </div>
+      `).join('');
+    }
+
+    /**************************************************************
+     * 10. Google 試算表 (GAS) 串接與設定彈窗
+     **************************************************************/
+    function openConfigModal() {
+      document.getElementById('firebaseUrlInput').value = FIREBASE_URL;
+      document.getElementById('gasUrlInput').value = GAS_WEB_APP_URL;
+      document.getElementById('configModal').classList.remove('hidden');
+    }
+
+    function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
+
+    async function saveCloudConfig() {
+      const fUrl = document.getElementById('firebaseUrlInput').value.trim().replace(/\/$/, '');
+      const gUrl = document.getElementById('gasUrlInput').value.trim();
+      if (fUrl) {
+        FIREBASE_URL = fUrl.includes('.firebaseio.com/') ? fUrl : `${fUrl}/weekly_plan_game_v2`;
+        localStorage.setItem('tc_firebase_url_v2', FIREBASE_URL);
+      }
+      if (gUrl) {
+        GAS_WEB_APP_URL = gUrl;
+        localStorage.setItem('tc_gas_url', GAS_WEB_APP_URL);
+      }
+      try {
+        await fetch(`${FIREBASE_URL}/config.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gasUrl: GAS_WEB_APP_URL })
+        });
+      } catch (e) {}
+      closeConfigModal();
+      showToast('✓ 已儲存設定');
+      pullFromCloud();
+    }
+
+    async function syncAllToGoogleSheet(manualTrigger = false) {
+      if (!GAS_WEB_APP_URL) {
+        if (manualTrigger) openConfigModal();
+        return;
+      }
+
+      const allPlayers = Object.values(state.players);
+      if (allPlayers.length === 0) {
+        if (manualTrigger) alert('目前還沒有玩家資料可匯出！');
+        return;
+      }
+
+      if (manualTrigger) showToast('⏳ 正在匯出檢測報告至 Google 試算表...');
+
+      const slotNameMap = {
+        s1: '17:00-19:00 放學傍晚',
+        s2: '19:00-22:00 晚上黃金',
+        s3: '22:00-睡前自由',
+        w1: '08:00-12:00 週末上午',
+        w2: '13:00-18:00 週末下午',
+        w3: '18:00-睡前晚上'
+      };
+
+      const payload = {
+        timestamp: new Date().toLocaleString('zh-TW'),
+        playersSummary: [],
+        detailedRows: []
+      };
+
+      allPlayers.forEach(p => {
+        const diag = diagnosePlayerWeek(p, allPlayers, state.simState.seed || 12345);
+        const weekResults = simulatePlayerWeek(p, allPlayers, state.simState.seed || 12345);
+        const daysPlan = ensurePlayerPlan(p);
+        const dailyChoices = [];
+
+        for (let d = 0; d < 7; d++) {
+          const r = weekResults[d];
+          dailyChoices.push(`${DAYS[d]}:${r.picked || '未選'}`);
+
+          const dp = daysPlan[d];
+          Object.entries(dp.slots || {}).forEach(([sKey, sVal]) => {
+            payload.detailedRows.push({
+              name: p.name,
+              day: DAYS[d],
+              hour: `${slotNameMap[sKey] || sKey} (${formatBedtimeText(dp.bedtime)})`,
+              category: sVal.cat,
+              activity: sVal.text || ''
+            });
+          });
+        }
+
+        payload.playersSummary.push({
+          name: p.name,
+          score: diag.score,
+          badge: diag.title,
+          planStudy: diag.planS,
+          realStudy: diag.realS,
+          planOwn: diag.planO,
+          realOwn: diag.realO,
+          totalSleep: diag.totalSleep,
+          overdrawnDays: diag.overdrawnDays,
+          evaluation: `${diag.evaluation} ${diag.suggestion}`,
+          bibleVerse: `${diag.verse.ref}：「${diag.verse.text}」（${diag.verse.advice}）`,
+          choices: dailyChoices.join(' / ')
+        });
+      });
+
+      try {
+        await fetch(GAS_WEB_APP_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        if (manualTrigger) showToast('✅ 已成功匯出至 Google 試算表！');
+      } catch (e) {
+        if (manualTrigger) showToast('⚠️ 試算表匯出失敗');
+      }
+    }
+
+    function toggleTheme() {
+      document.documentElement.classList.toggle('dark');
+    }
+  </script>
+</body>
+</html>
